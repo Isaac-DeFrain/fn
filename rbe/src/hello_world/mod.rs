@@ -1,3 +1,5 @@
+// Hello World
+
 use std::fmt;
 
 // here's a comment
@@ -8,11 +10,13 @@ pub fn main() {
     println!("{:#?}", Person { name: "Rusty", age: 11 });
     println!("{}", Structure(42));
     println!("{}", List(vec![0, 1, 2, 3, 4]));
+    println!("");
     
     let x = 123;
     println!("{}", x);
     println!("0x{:X}", x);
     println!("0o{:o}", x);
+    println!("");
 }
 
 #[derive(Debug)]
