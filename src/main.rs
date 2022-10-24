@@ -1,6 +1,9 @@
 /*
- * Ownership in Rust
- */ 
+ * Examples
+ */
+
+mod crypto;
+mod time;
 
 fn main() {
     fn take_ownership(s: String) {
@@ -90,27 +93,78 @@ fn main() {
 
     // we're fine as long as we don't use m1 again
 
-    use std::fmt;
-    use std::fmt::{Debug, Formatter};
+    // clonable function pointer
+    use std::fmt::{Debug, Formatter, Result};
+    use rand::prelude::*;
     #[derive(Copy, Clone)]
     struct Gen<T>(fn() -> T);
 
     impl<T: Debug> Debug for Gen<T> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             self.0().fmt(f)
         }
     }
 
-    // impl<T> Copy for Gen<T> {}
-    
-    // impl<T> Clone for Gen<T> {
-    //     fn clone(&self) -> Self {
-    //         *self
-    //     }
-    // }
-    fn f() -> u32 { 42 }
-    let a = Gen::<u32>(f);
+    use rand::distributions::Standard;
+    fn gen<T>() -> T where Standard: Distribution<T> {
+        rand::random::<T>()
+    }
+
+    fn gen_u32() -> u32 {
+        gen::<u32>() % 100_000
+    }
+
+    fn gen_float() -> f64 {
+        gen::<f64>() * 1_000_000_000f64
+    }
+
+    let a = Gen(gen_u32);
     let b = a;
-    println!("{:?}, {:?}", a, b)
+    let c = Gen::<bool>(gen);
+    // the type parameter needs to be fixed
+    // let c = Gen(gen);
+    let d = Gen(gen_float);
+    println!("{:?}, {:?}, {:?}, {:?}", a, b, c, d);
+
+    let mut nums: Vec<i32> = (0..100).collect();
+    nums.shuffle(&mut rand::thread_rng());
+    println!("start with {}\npop: {:?}, {:?}, {:?}, {:?}\nremaining: {}",
+        nums.len(),
+        nums.pop().unwrap(),
+        nums.pop().unwrap(),
+        nums.pop().unwrap(),
+        nums.pop().unwrap(),
+        nums.len()
+    );
+
+    // macros
+    macro_rules! eval {
+        () => {
+            println!("please provide a function to evaluate");
+        };
+        ($f: ident) => {
+            println!("{}() = {}", stringify!($f), $f());
+        };
+    }
+
+    macro_rules! expr_value {
+        ($e: expr) => {
+            println!("{:?} = {:?}", stringify!($e), $e);
+        };
+    }
+
+    eval!(gen_u32);
+
+    expr_value!({
+        let x = 2i32;
+        fn f(z: i32) -> i32 { z + 1 }
+        f(x) * 7
+    });
+
+    // 
+    crypto::hmac::hello();
+
+    // 
+    time::examples::main();
 
 }
