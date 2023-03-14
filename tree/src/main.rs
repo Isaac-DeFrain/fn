@@ -3,12 +3,22 @@ use std::collections::HashMap;
 use id_tree::{Tree, Node, NodeId, InsertBehavior::*};
 
 fn merge(base_tree: &mut Tree<i32>, incoming_tree: &mut Tree<i32>, junction_node_id: &NodeId) {
-    println!("=== Base tree before merge ===");
+    println!("=== Base tree ===");
     let mut w = String::new();
     base_tree.write_formatted(&mut w).unwrap();
     println!("{}", w);
 
-    println!("=== Incoming tree before merge ===");
+    println!("=== Junction node ===");
+    let parent_id = base_tree.get(junction_node_id).unwrap().parent().unwrap();
+    let mut children = Vec::new();
+    for child_id in base_tree.get(junction_node_id).unwrap().children() {
+        children.push(base_tree.get(child_id).unwrap().data())
+    }
+    println!("Data:    {:?}", base_tree.get(junction_node_id).unwrap().data());
+    println!("Parent:  {:?}", base_tree.get(parent_id).unwrap().data());
+    println!("Chidren: {:?}", children);
+
+    println!("\n=== Incoming tree ===");
     let mut w = String::new();
     incoming_tree.write_formatted(&mut w).unwrap();
     println!("{}", w);
@@ -41,18 +51,20 @@ fn main() {
     // Base tree
     let mut base_tree: Tree<i32> = Tree::new();
     let root_id = base_tree.insert(Node::new(0), AsRoot).unwrap();
-    let child_1_id = base_tree.insert(Node::new(1), UnderNode(&root_id)).unwrap();
-    let _child_2_id = base_tree.insert(Node::new(2), UnderNode(&root_id)).unwrap();
-    let _child_3_id = base_tree.insert(Node::new(3), UnderNode(&child_1_id)).unwrap();
+    let node_id1 = base_tree.insert(Node::new(1), UnderNode(&root_id)).unwrap();
+    let node_id2 = base_tree.insert(Node::new(2), UnderNode(&root_id)).unwrap();
+    let _node_id3 = base_tree.insert(Node::new(3), UnderNode(&node_id1)).unwrap();
+    let _node_id4 = base_tree.insert(Node::new(-1), UnderNode(&node_id1)).unwrap();
+    let _node_id5 = base_tree.insert(Node::new(-2), UnderNode(&node_id2)).unwrap();
 
     // Incoming tree
     let mut incoming_tree: Tree<i32> = Tree::new();
     let incoming_root_id = incoming_tree.insert(Node::new(4), AsRoot).unwrap();
-    let incoming_child_1_id = incoming_tree.insert(Node::new(5), UnderNode(&incoming_root_id)).unwrap();
-    let incoming_child_2_id = incoming_tree.insert(Node::new(6), UnderNode(&incoming_root_id)).unwrap();
-    let _incoming_child_3_id = incoming_tree.insert(Node::new(7), UnderNode(&incoming_child_1_id)).unwrap();
-    let _incoming_child_4_id = incoming_tree.insert(Node::new(8), UnderNode(&incoming_child_2_id)).unwrap();
-    let _incoming_child_5_id = incoming_tree.insert(Node::new(9), UnderNode(&incoming_child_2_id)).unwrap();
+    let incoming_node_id1 = incoming_tree.insert(Node::new(5), UnderNode(&incoming_root_id)).unwrap();
+    let incoming_node_id2 = incoming_tree.insert(Node::new(6), UnderNode(&incoming_root_id)).unwrap();
+    let _incoming_node_id3 = incoming_tree.insert(Node::new(7), UnderNode(&incoming_node_id1)).unwrap();
+    let _incoming_node_id4 = incoming_tree.insert(Node::new(8), UnderNode(&incoming_node_id2)).unwrap();
+    let _incoming_node_id5 = incoming_tree.insert(Node::new(9), UnderNode(&incoming_node_id2)).unwrap();
 
-    merge(&mut base_tree, &mut incoming_tree, &child_1_id);
+    merge(&mut base_tree, &mut incoming_tree, &node_id1);
 }
