@@ -1,6 +1,7 @@
 use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 fn merge(base_tree: &mut Tree<i32>, incoming_tree: &mut Tree<i32>, junction_node_id: &NodeId) {
     let mut merge_id_map = HashMap::new();
     // associate the incoming tree's root node id with it's new id in the base tree
@@ -27,6 +28,8 @@ fn merge(base_tree: &mut Tree<i32>, incoming_tree: &mut Tree<i32>, junction_node
     }
 }
 
+#[test]
+#[allow(dead_code)]
 pub fn merge_example() {
     // Base tree
     let mut base_tree: Tree<i32> = Tree::new();

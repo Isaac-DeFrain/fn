@@ -2,37 +2,13 @@ use std::collections::HashMap;
 
 use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
 
-use crate::ledger::{LedgerDiff, Diff};
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct Block {
-    pub pk: String,
-    pub diff: LedgerDiff,
-    pub weight: u32,
-}
+use crate::block::Block;
 
 #[derive(Clone)]
 pub struct WeightedTree {
     pub tree: id_tree::Tree<Block>,
     pub weight: u32,
     pub weights: HashMap<NodeId, u32>,
-}
-
-impl Block {
-    pub fn new(pk: &str, weight: u32, diff: LedgerDiff) -> Self {
-        Self {
-            pk: pk.to_string(),
-            diff,
-            weight,
-        }
-    }
-}
-
-impl std::fmt::Debug for Block {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ pk: {:?}, weight: {} }}", self.pk.clone(), self.weight)
-        // write!(f, "{{ pk: {:?}, weight: {}, diff: {:?} }}", self.pk.clone(), self.weight, self.diff.clone())
-    }
 }
 
 impl WeightedTree {
@@ -55,7 +31,7 @@ impl WeightedTree {
         self.weight += block.weight;
         let id = self
             .tree
-            .insert(Node::new(block.clone()), UnderNode(parent))
+            .insert(Node::new(block), UnderNode(parent))
             .unwrap();
         id
     }
@@ -89,13 +65,7 @@ impl Eq for WeightedTree {}
 
 impl PartialOrd for WeightedTree {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        if self.weight < other.weight {
-            Some(std::cmp::Ordering::Greater)
-        } else if self.weight == other.weight {
-            Some(std::cmp::Ordering::Equal)
-        } else {
-            Some(std::cmp::Ordering::Less)
-        }
+        Some(self.weight.cmp(&other.weight))
     }
 }
 
@@ -115,6 +85,8 @@ impl std::fmt::Debug for WeightedTree {
 
 #[test]
 pub fn insert_weighted_block() {
+    use crate::ledger::*;
+
     println!("~~~~~ insert_weighted_block ~~~~~");
     println!();
     // Base tree
@@ -124,7 +96,10 @@ pub fn insert_weighted_block() {
     //          |
     //        (d, 1)
     let tree = &mut WeightedTree::new();
-    let root_id = tree.insert(Block::new("a", 1, LedgerDiff::from(&[("b", "a", Diff::Transfer(2))])), None);
+    let root_id = tree.insert(
+        Block::new("a", 1, LedgerDiff::from(&[("b", "a", Diff::Transfer(2))])),
+        None,
+    );
     let node1_id = tree.insert(
         Block::new("b", 3, LedgerDiff::from(&[("c", "b", Diff::Transfer(1))])),
         Some(&root_id),
@@ -217,7 +192,11 @@ pub fn insert_weighted_block() {
     println!();
 
     let node4_id = tree.insert(
-        Block::new("d", 2, LedgerDiff::from(&[("b", "c", Diff::Transfer(1)), ("a", "d", Diff::Transfer(1))])),
+        Block::new(
+            "d",
+            2,
+            LedgerDiff::from(&[("b", "c", Diff::Transfer(1)), ("a", "d", Diff::Transfer(1))]),
+        ),
         Some(&node1_id),
     );
     // Final tree
@@ -315,4 +294,16 @@ pub fn insert_weighted_block() {
     println!("{:?}", tree);
 
     // assert!(false);
+}
+
+impl std::fmt::Debug for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ pk: {:?}, weight: {} }}",
+            self.pk.clone(),
+            self.weight
+        )
+        // write!(f, "{{ pk: {:?}, weight: {}, diff: {:?} }}", self.pk.clone(), self.weight, self.diff.clone())
+    }
 }

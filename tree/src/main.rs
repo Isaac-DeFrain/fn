@@ -1,3 +1,4 @@
+mod block;
 mod ledger;
 mod merge;
 mod weighted_forest;
