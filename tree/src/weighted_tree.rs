@@ -1,21 +1,28 @@
+use std::collections::HashMap;
+
 use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
+
+use crate::ledger::LedgerDiff;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Block {
-    pub data: String,
+    pub pk: String,
+    pub data: LedgerDiff,
     pub weight: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WeightedTree {
     pub tree: id_tree::Tree<Block>,
     pub weight: u32,
+    pub weights: HashMap<NodeId, u32>,
 }
 
 impl Block {
-    pub fn new(data: &str, weight: u32) -> Self {
+    pub fn new(pk: &str, weight: u32, data: LedgerDiff) -> Self {
         Self {
-            data: data.to_string(),
+            pk: pk.to_string(),
+            data,
             weight,
         }
     }
@@ -23,7 +30,7 @@ impl Block {
 
 impl std::fmt::Debug for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", (self.data.clone(), self.weight))
+        write!(f, "{:?}", (self.pk.clone(), self.data.clone(), self.weight))
     }
 }
 
@@ -32,34 +39,86 @@ impl WeightedTree {
         Self {
             tree: Tree::new(),
             weight: 0,
+            weights: HashMap::new(),
         }
     }
 
-    pub fn new_root(&mut self, block: Block) -> NodeId {
+    fn new_root(&mut self, block: Block) -> NodeId {
         self.weight += block.weight;
-        self
+        let id = self
             .tree
             .insert(Node::new(block.clone()), AsRoot)
-            .unwrap()
+            .unwrap();
+        self.weights.insert(id.clone(), block.weight);
+        id
     }
 
-    pub fn new_leaf(&mut self, block: Block, parent: &NodeId) -> NodeId {
+    fn new_leaf(&mut self, block: Block, parent: &NodeId) -> NodeId {
         self.weight += block.weight;
-        self
+        let id = self
             .tree
             .insert(Node::new(block.clone()), UnderNode(parent))
-            .unwrap()
+            .unwrap();
+        id
     }
 
-    pub fn support(&self, id: &NodeId) -> u32 {
+    pub fn insert(&mut self, block: Block, parent: Option<&NodeId>) -> NodeId {
+        let id = match parent {
+            None => {
+                self.new_root(block.clone())
+            }
+            Some(parent) => {
+                self.new_leaf(block.clone(), parent)
+            }
+        };
+        self.weights.insert(id.clone(), block.weight);
+        id
+    }
+
+    pub fn support(&self, node_id: &NodeId) -> u32 {
         self.tree
-            .traverse_level_order_ids(id).unwrap()
-            .map(|nid| self.tree.get(&nid).unwrap().data().weight)
+            .traverse_level_order_ids(node_id).unwrap()
+            .map(|id| self.tree.get(&id).unwrap().data().weight)
             .reduce(|acc, w| acc + w).unwrap()
     }
 }
 
-pub fn add_weighted_block_example() {
+impl PartialEq for WeightedTree {
+    fn eq(&self, other: &Self) -> bool {
+        self.weight == other.weight
+    }
+}
+
+impl Eq for WeightedTree {}
+
+impl PartialOrd for WeightedTree {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.weight < other.weight {
+            Some(std::cmp::Ordering::Greater)
+        } else if self.weight == other.weight {
+            Some(std::cmp::Ordering::Equal)
+        } else {
+            Some(std::cmp::Ordering::Less)
+        }
+    }
+}
+
+impl Ord for WeightedTree {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl std::fmt::Debug for WeightedTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut w = String::new();
+        self.tree.write_formatted(&mut w).unwrap();
+        write!(f, "{}", w)
+    }
+}
+
+#[test]
+fn insert_weighted_block() {
     println!("~~~~~ Add weighted block example ~~~~~");
     println!();
     // Base tree
@@ -69,40 +128,38 @@ pub fn add_weighted_block_example() {
     //          |
     //        (d, 1)
     let tree = &mut WeightedTree::new();
-    let node0_id = tree.new_root(Block::new("a", 1));
-    let node1_id = tree.new_leaf(Block::new("b", 3), &node0_id);
-    let node2_id = tree.new_leaf(Block::new("c", 2), &node0_id);
-    let node3_id = tree.new_leaf(Block::new("d", 1), &node1_id);
+    let root_id = tree.insert(Block::new("a", 1, LedgerDiff::from(&[("b", "a", 2)])), None);
+    let node1_id = tree.insert(Block::new("b", 3, LedgerDiff::from(&[("c", "b", 1)])), Some(&root_id));
+    let node2_id = tree.insert(Block::new("a", 2, LedgerDiff::from(&[("c", "b", 2)])), Some(&root_id));
+    let node3_id = tree.insert(Block::new("c", 1, LedgerDiff::from(&[("a", "c", 1)])), Some(&node1_id));
     
     println!("=== Before adding block ===");
     println!();
 
-    println!("Weight: {}", tree.weight);
+    println!("** Weight: {}", tree.weight);
     println!();
 
-    println!("=== Ancestors ===");
-    println!("{:?}: {:?}", tree.tree.get(&node0_id).unwrap().data(), tree.tree.ancestors(&node0_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
+    println!("** Ancestors");
+    println!("{:?}: {:?}", tree.tree.get(&root_id).unwrap().data(), tree.tree.ancestors(&root_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node1_id).unwrap().data(), tree.tree.ancestors(&node1_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node2_id).unwrap().data(), tree.tree.ancestors(&node2_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node3_id).unwrap().data(), tree.tree.ancestors(&node3_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!();
 
-    println!("=== Support ===");
-    println!("{:?}: {:?}", tree.tree.get(&node0_id).unwrap().data(), tree.support(&node0_id));
+    println!("** Support");
+    println!("{:?}: {:?}", tree.tree.get(&root_id).unwrap().data(), tree.support(&root_id));
     println!("{:?}: {:?}", tree.tree.get(&node1_id).unwrap().data(), tree.support(&node1_id));
     println!("{:?}: {:?}", tree.tree.get(&node2_id).unwrap().data(), tree.support(&node2_id));
     println!("{:?}: {:?}", tree.tree.get(&node3_id).unwrap().data(), tree.support(&node3_id));
     println!();
 
-    println!("=== Tree ===");
-    let mut w = String::new();
-    tree.tree.write_formatted(&mut w).unwrap();
-    println!("{}", w);
+    println!("** Tree");
+    println!("{:?}", tree);
     
-    println!("=== After block ===");
+    println!("=== After adding block ===");
     println!();
 
-    let node4_id = tree.new_leaf(Block::new("f", 2), &node1_id);
+    let node4_id = tree.insert(Block::new("d", 2, LedgerDiff::from(&[("b", "c", 1), ("a", "d", 1)])), Some(&node1_id));
     // Final tree
     //    (a, 1)
     //    /    \
@@ -110,27 +167,27 @@ pub fn add_weighted_block_example() {
     //        /    \
     //     (f, 2) (d, 1)
 
-    println!("Weight: {}", tree.weight);
+    println!("** Weight: {}", tree.weight);
     println!();
 
-    println!("=== Support ===");
-    println!("{:?}: {:?}", tree.tree.get(&node0_id).unwrap().data(), tree.support(&node0_id));
+    println!("** Support");
+    println!("{:?}: {:?}", tree.tree.get(&root_id).unwrap().data(), tree.support(&root_id));
     println!("{:?}: {:?}", tree.tree.get(&node1_id).unwrap().data(), tree.support(&node1_id));
     println!("{:?}: {:?}", tree.tree.get(&node2_id).unwrap().data(), tree.support(&node2_id));
     println!("{:?}: {:?}", tree.tree.get(&node3_id).unwrap().data(), tree.support(&node3_id));
     println!("{:?}: {:?}", tree.tree.get(&node4_id).unwrap().data(), tree.support(&node4_id));
     println!();
 
-    println!("=== Ancestors ===");
-    println!("{:?}: {:?}", tree.tree.get(&node0_id).unwrap().data(), tree.tree.ancestors(&node0_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
+    println!("** Ancestors");
+    println!("{:?}: {:?}", tree.tree.get(&root_id).unwrap().data(), tree.tree.ancestors(&root_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node1_id).unwrap().data(), tree.tree.ancestors(&node1_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node2_id).unwrap().data(), tree.tree.ancestors(&node2_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node3_id).unwrap().data(), tree.tree.ancestors(&node3_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!("{:?}: {:?}", tree.tree.get(&node4_id).unwrap().data(), tree.tree.ancestors(&node4_id).unwrap().map(|n| n.data()).cloned().collect::<Vec<Block>>());
     println!();
 
-    println!("=== Tree ===");
-    let mut w = String::new();
-    tree.tree.write_formatted(&mut w).unwrap();
-    println!("{}", w);
+    println!("** Tree");
+    println!("{:?}", tree);
+
+    assert!(false);
 }
