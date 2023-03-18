@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use id_tree::NodeId;
 
-use crate::weighted_tree::{Block, WeightedTree};
+use crate::{weighted_tree::{Block, WeightedTree}, ledger::Diff};
 
 struct WeightedForest {
     indices: HashMap<usize, usize>,
@@ -89,12 +89,12 @@ fn forest_example() {
     
     // tree 0
     let id0 = forest.insert(
-        Block::new("abc", 10, LedgerDiff::from(&[("def", "abc", 2)])),
+        Block::new("abc", 10, LedgerDiff::from(&[("abc", "abc", Diff::Coinbase(2))])),
         None,
         0,
     );
     let id1 = forest.insert(
-        Block::new("def", 15, LedgerDiff::from(&[("abc", "def", 3)])),
+        Block::new("def", 15, LedgerDiff::from(&[("abc", "def", Diff::Transfer(3))])),
         Some(&id0),
         0,
     );
@@ -104,7 +104,7 @@ fn forest_example() {
         Block::new(
             "abc",
             3,
-            LedgerDiff::from(&[("def", "abc", 2), ("ghi", "abc", 1)]),
+            LedgerDiff::from(&[("def", "abc", Diff::Transfer(2)), ("ghi", "abc", Diff::Coinbase(3))]),
         ),
         None,
         2,
@@ -112,26 +112,26 @@ fn forest_example() {
 
     // tree 0
     let id2 = forest.insert(
-        Block::new("abc", 2, LedgerDiff::from(&[("abc", "def", 3)])),
+        Block::new("abc", 2, LedgerDiff::from(&[("abc", "def", Diff::Transfer(3))])),
         Some(&id0),
         0,
     );
 
     // tree 1
     let id4 = forest.insert(
-        Block::new("def", 4, LedgerDiff::from(&[("b", "a", 2)])),
+        Block::new("def", 4, LedgerDiff::from(&[("b", "a", Diff::Transfer(2))])),
         None,
         1,
     );
     let id5 = forest.insert(
-        Block::new("ghi", 1, LedgerDiff::from(&[("b", "c", 2)])),
+        Block::new("ghi", 1, LedgerDiff::from(&[("b", "c", Diff::Transfer(2))])),
         None,
         1,
     );
 
     // tree 0
     let id3 = forest.insert(
-        Block::new("ghi", 5, LedgerDiff::from(&[("b", "a", 2)])),
+        Block::new("ghi", 5, LedgerDiff::from(&[("b", "a", Diff::Transfer(2))])),
         None,
         0,
     );
