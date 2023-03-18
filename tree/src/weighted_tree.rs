@@ -7,7 +7,7 @@ use crate::ledger::LedgerDiff;
 #[derive(Clone, PartialEq, Eq)]
 pub struct Block {
     pub pk: String,
-    pub data: LedgerDiff,
+    pub diff: LedgerDiff,
     pub weight: u32,
 }
 
@@ -19,10 +19,10 @@ pub struct WeightedTree {
 }
 
 impl Block {
-    pub fn new(pk: &str, weight: u32, data: LedgerDiff) -> Self {
+    pub fn new(pk: &str, weight: u32, diff: LedgerDiff) -> Self {
         Self {
             pk: pk.to_string(),
-            data,
+            diff,
             weight,
         }
     }
@@ -30,7 +30,8 @@ impl Block {
 
 impl std::fmt::Debug for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", (self.pk.clone(), self.data.clone(), self.weight))
+        write!(f, "{{ pk: {:?}, weight: {} }}", self.pk.clone(), self.weight)
+        // write!(f, "{{ pk: {:?}, weight: {}, diff: {:?} }}", self.pk.clone(), self.weight, self.diff.clone())
     }
 }
 
@@ -113,8 +114,8 @@ impl std::fmt::Debug for WeightedTree {
 }
 
 #[test]
-fn insert_weighted_block() {
-    println!("~~~~~ Add weighted block example ~~~~~");
+pub fn insert_weighted_block() {
+    println!("~~~~~ insert_weighted_block ~~~~~");
     println!();
     // Base tree
     //    (a, 1)
@@ -145,7 +146,7 @@ fn insert_weighted_block() {
 
     println!("** Ancestors");
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&root_id).unwrap().data(),
         tree.tree
             .ancestors(&root_id)
@@ -155,7 +156,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node1_id).unwrap().data(),
         tree.tree
             .ancestors(&node1_id)
@@ -165,7 +166,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node2_id).unwrap().data(),
         tree.tree
             .ancestors(&node2_id)
@@ -175,7 +176,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.tree
             .ancestors(&node3_id)
@@ -188,22 +189,22 @@ fn insert_weighted_block() {
 
     println!("** Support");
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&root_id).unwrap().data(),
         tree.support(&root_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node1_id).unwrap().data(),
         tree.support(&node1_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node2_id).unwrap().data(),
         tree.support(&node2_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.support(&node3_id)
     );
@@ -236,22 +237,22 @@ fn insert_weighted_block() {
         tree.support(&root_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node1_id).unwrap().data(),
         tree.support(&node1_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node2_id).unwrap().data(),
         tree.support(&node2_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.support(&node3_id)
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} : {:?}",
         tree.tree.get(&node4_id).unwrap().data(),
         tree.support(&node4_id)
     );
@@ -259,7 +260,7 @@ fn insert_weighted_block() {
 
     println!("** Ancestors");
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&root_id).unwrap().data(),
         tree.tree
             .ancestors(&root_id)
@@ -269,7 +270,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node1_id).unwrap().data(),
         tree.tree
             .ancestors(&node1_id)
@@ -279,7 +280,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node2_id).unwrap().data(),
         tree.tree
             .ancestors(&node2_id)
@@ -289,7 +290,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.tree
             .ancestors(&node3_id)
@@ -299,7 +300,7 @@ fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?}: {:?}",
+        "{:?} => {:?}",
         tree.tree.get(&node4_id).unwrap().data(),
         tree.tree
             .ancestors(&node4_id)
@@ -313,5 +314,5 @@ fn insert_weighted_block() {
     println!("** Tree");
     println!("{:?}", tree);
 
-    assert!(false);
+    // assert!(false);
 }

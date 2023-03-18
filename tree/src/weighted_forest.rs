@@ -56,24 +56,26 @@ impl std::fmt::Debug for WeightedForest {
         let mut trees = self.trees.clone();
         trees.sort();
         for tree in &trees {
-            write!(f, "** Tree {} ***\n", n).unwrap();
+            write!(f, "************\n").unwrap();
+            write!(f, "** Tree {} **\n", n).unwrap();
+            write!(f, "************\n").unwrap();
             write!(f, "* weight: {}\n", tree.weight).unwrap();
-            write!(f, "* support:\n").unwrap();
+            write!(f, "* support\n").unwrap();
             for node_id in tree
-                .tree
-                .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
-                .unwrap()
+            .tree
+            .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
+            .unwrap()
             {
                 writeln!(
                     f,
-                    "  [ {:?}: {:?} ]",
+                    "  - [ {:?}: {:?} ]",
                     tree.support(&node_id),
                     tree.tree.get(&node_id).unwrap().data()
                 )
                 .unwrap();
             }
             n += 1;
-            res = write!(f, "* tree:\n{:?}\n", tree);
+            res = write!(f, "* tree\n{:?}\n", tree);
         }
         res
     }
@@ -81,8 +83,10 @@ impl std::fmt::Debug for WeightedForest {
 
 #[test]
 fn forest_example() {
-    let mut forest = WeightedForest::new();
+    use crate::ledger::LedgerDiff;
 
+    let mut forest = WeightedForest::new();
+    
     // tree 0
     let id0 = forest.insert(
         Block::new("abc", 10, LedgerDiff::from(&[("def", "abc", 2)])),
@@ -94,7 +98,7 @@ fn forest_example() {
         Some(&id0),
         0,
     );
-
+    
     // tree 2
     let id6 = forest.insert(
         Block::new(
@@ -133,5 +137,5 @@ fn forest_example() {
     );
 
     println!("{:?}", forest);
-    assert!(false);
+    // assert!(false);
 }
