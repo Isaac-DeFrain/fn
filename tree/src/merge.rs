@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
+use std::collections::HashMap;
 
 fn merge(base_tree: &mut Tree<i32>, incoming_tree: &mut Tree<i32>, junction_node_id: &NodeId) {
     let mut merge_id_map = HashMap::new();
@@ -73,10 +73,7 @@ pub fn merge_example() {
     for child_id in base_tree.get(&node_id1).unwrap().children() {
         children.push(base_tree.get(child_id).unwrap().data())
     }
-    println!(
-        "Data:    {:?}",
-        base_tree.get(&node_id1).unwrap().data()
-    );
+    println!("Data:    {:?}", base_tree.get(&node_id1).unwrap().data());
     println!("Parent:  {:?}", base_tree.get(parent_id).unwrap().data());
     println!("Chidren: {:?}", children);
 

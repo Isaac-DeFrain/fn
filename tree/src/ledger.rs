@@ -15,7 +15,11 @@ pub struct LedgerDiff(HashMap<(String, String), u64>);
 
 impl Account {
     pub fn new(pk: String, stake: u64, delegations: u64) -> Self {
-        Self { pk, stake, delegations }
+        Self {
+            pk,
+            stake,
+            delegations,
+        }
     }
 }
 
@@ -46,9 +50,15 @@ pub fn ledger_example() {
     let bp2 = "c".to_string();
 
     // insert accounts
-    ledger.0.insert(bp0.clone(), Account::new(bp0.clone(), 100, 0));
-    ledger.0.insert(bp1.clone(), Account::new(bp1.clone(), 150, 5));
-    ledger.0.insert(bp2.clone(), Account::new(bp2.clone(), 87, 10));
+    ledger
+        .0
+        .insert(bp0.clone(), Account::new(bp0.clone(), 100, 0));
+    ledger
+        .0
+        .insert(bp1.clone(), Account::new(bp1.clone(), 150, 5));
+    ledger
+        .0
+        .insert(bp2.clone(), Account::new(bp2.clone(), 87, 10));
 
     println!("{:?}", ledger);
     // assert!(false);
