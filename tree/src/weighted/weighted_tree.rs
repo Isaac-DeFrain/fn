@@ -87,8 +87,7 @@ impl std::fmt::Debug for WeightedTree {
 pub fn insert_weighted_block() {
     use crate::ledger::*;
 
-    println!("~~~~~ insert_weighted_block ~~~~~");
-    println!();
+    println!("~~~~~ insert_weighted_block ~~~~~\n");
     // Base tree
     //    (a, 1)
     //    /    \
@@ -119,11 +118,9 @@ pub fn insert_weighted_block() {
         Some(&node1_id),
     );
 
-    println!("=== Before adding block ===");
-    println!();
+    println!("=== Before adding block ===\n");
 
-    println!("** Weight: {}", tree.weight);
-    println!();
+    println!("** Weight: {}\n", tree.weight);
 
     println!("** Ancestors");
     println!(
@@ -157,7 +154,7 @@ pub fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?} => {:?}",
+        "{:?} => {:?}\n",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.tree
             .ancestors(&node3_id)
@@ -166,7 +163,6 @@ pub fn insert_weighted_block() {
             .cloned()
             .collect::<Vec<Block>>()
     );
-    println!();
 
     println!("** Support");
     println!(
@@ -185,17 +181,15 @@ pub fn insert_weighted_block() {
         tree.support(&node2_id)
     );
     println!(
-        "{:?} : {:?}",
+        "{:?} : {:?}\n",
         tree.tree.get(&node3_id).unwrap().data(),
         tree.support(&node3_id)
     );
-    println!();
 
     println!("** Tree");
     println!("{:?}", tree);
 
-    println!("=== After adding block ===");
-    println!();
+    println!("=== After adding block ===\n");
 
     let node4_id = tree.insert(
         Block::new(
@@ -212,8 +206,7 @@ pub fn insert_weighted_block() {
     //        /    \
     //     (f, 2) (d, 1)
 
-    println!("** Weight: {}", tree.weight);
-    println!();
+    println!("** Weight: {}\n", tree.weight);
 
     println!("** Support");
     println!(
@@ -237,11 +230,10 @@ pub fn insert_weighted_block() {
         tree.support(&node3_id)
     );
     println!(
-        "{:?} : {:?}",
+        "{:?} : {:?}\n",
         tree.tree.get(&node4_id).unwrap().data(),
         tree.support(&node4_id)
     );
-    println!();
 
     println!("** Ancestors");
     println!(
@@ -285,7 +277,7 @@ pub fn insert_weighted_block() {
             .collect::<Vec<Block>>()
     );
     println!(
-        "{:?} => {:?}",
+        "{:?} => {:?}\n",
         tree.tree.get(&node4_id).unwrap().data(),
         tree.tree
             .ancestors(&node4_id)
@@ -294,7 +286,6 @@ pub fn insert_weighted_block() {
             .cloned()
             .collect::<Vec<Block>>()
     );
-    println!();
 
     println!("** Tree");
     println!("{:?}", tree);
@@ -310,6 +301,5 @@ impl std::fmt::Debug for Block {
             self.pk.clone(),
             self.weight
         )
-        // write!(f, "{{ pk: {:?}, weight: {}, diff: {:?} }}", self.pk.clone(), self.weight, self.diff.clone())
     }
 }
