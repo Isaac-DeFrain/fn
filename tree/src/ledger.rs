@@ -1,22 +1,26 @@
 use std::{collections::HashMap, fmt::Debug};
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Account {
     pk: String,
-    delegate: Option<String>,
     balance: u64,
+    delegate: Option<String>,
     delegations: u64,
 }
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct Ledger(HashMap<String, Account>);
+pub struct Ledger {
+    total: u64,
+    map: HashMap<String, Account>,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct AccountUpdate {
     pk: String,
+    coinbase: bool,
     amount: Option<i64>,
     delegate: Option<String>,
     delegation: Option<u64>,
@@ -47,10 +51,17 @@ impl Account {
 
 #[allow(dead_code)]
 impl Ledger {
+    pub fn new() -> Self {
+        Self {
+            total: 0,
+            map: HashMap::new(),
+        }
+    }
+
     pub fn apply(&mut self, delta: LedgerDiff) -> Result<(), String> {
         for ((from, to), diff) in delta.0 {
             let mut updates = Vec::new();
-            match self.0.get(&from) {
+            match self.map.get(&from) {
                 None => {
                     return Err(format!("Error: pk = {:?} is not in the ledger", from));
                 }
@@ -64,13 +75,14 @@ impl Ledger {
                         if from == to {
                             updates.push(AccountUpdate::new(
                                 from.clone(),
+                                true,
                                 Some(amount as i64),
                                 None,
                                 None,
                             ));
                         }
                     }
-                    Diff::Delegation => match self.0.get(&to) {
+                    Diff::Delegation => match self.map.get(&to) {
                         None => {
                             return Err(format!(
                                 "[Error] delegation: pk = {:?} is not in the ledger",
@@ -78,16 +90,20 @@ impl Ledger {
                             ));
                         }
                         Some(_) => {
+                            // delegator
                             updates.push(AccountUpdate::new(
                                 from.clone(),
+                                false,
                                 None,
                                 Some(to.clone()),
                                 None,
                             ));
+                            // delegate
                             updates.push(AccountUpdate::new(
                                 to.clone(),
+                                false,
                                 None,
-                                Some(from.clone()),
+                                None,
                                 Some(*balance),
                             ))
                         }
@@ -96,7 +112,7 @@ impl Ledger {
                         if *balance < amount {
                             return Err(format!("[Error] transfer: pk = {:?} has insufficient funds (balance = {}, amount = {})", from, balance.clone(), amount));
                         } else {
-                            match self.0.get(&to) {
+                            match self.map.get(&to) {
                                 None => {
                                     return Err(format!(
                                         "[Error] transfer: pk = {:?} is not in the ledger",
@@ -104,14 +120,18 @@ impl Ledger {
                                     ));
                                 }
                                 Some(_) => {
+                                    // from
                                     updates.push(AccountUpdate::new(
                                         from.clone(),
+                                        false,
                                         Some(-(amount as i64)),
                                         None,
                                         None,
                                     ));
+                                    // to
                                     updates.push(AccountUpdate::new(
                                         to.clone(),
+                                        false,
                                         Some(amount as i64),
                                         None,
                                         None,
@@ -125,20 +145,28 @@ impl Ledger {
             // apply all updates for the diff
             for AccountUpdate {
                 pk,
+                coinbase,
                 amount,
                 delegate,
                 delegation,
             } in updates
             {
-                if let Some(account) = self.0.get_mut(&pk) {
+                if let Some(account) = self.map.get_mut(&pk) {
+                    // coinbase or transfer
                     if let Some(amount) = amount {
-                        // coinbase or transfer
                         account.balance = (account.balance as i64 + amount) as u64;
-                    } else if delegate.is_some() {
+                        if coinbase {
+                            assert!(amount >= 0);
+                            self.total += amount as u64;
+                        }
+                    } else {
+                        // delegation
                         match delegation {
                             None => {
                                 // delegator
-                                continue;
+                                if delegate.is_some() {
+                                    account.delegate = delegate
+                                }
                             }
                             Some(amount) => {
                                 // delegate
@@ -156,6 +184,7 @@ impl Ledger {
 impl AccountUpdate {
     pub fn new(
         pk: String,
+        coinbase: bool,
         amount: Option<i64>,
         delegate: Option<String>,
         delegation: Option<u64>,
@@ -163,6 +192,7 @@ impl AccountUpdate {
         Self {
             pk,
             amount,
+            coinbase,
             delegate,
             delegation,
         }
@@ -190,22 +220,26 @@ impl LedgerDiff {
 
 #[test]
 pub fn ledger_example() {
-    let mut ledger = Ledger(HashMap::new());
+    let mut ledger = Ledger::new();
 
-    let bp0 = "a".to_string();
-    let bp1 = "b".to_string();
-    let bp2 = "c".to_string();
+    let a = "a".to_string();
+    let b = "b".to_string();
+    let c = "c".to_string();
+    let a_balance = 100;
+    let b_balance = 150;
+    let c_balance = 87;
 
     // insert accounts
     ledger
-        .0
-        .insert(bp0.clone(), Account::new(bp0.clone(), 100, 25));
+        .map
+        .insert(a.clone(), Account::new(a.clone(), a_balance, 25));
     ledger
-        .0
-        .insert(bp1.clone(), Account::new(bp1.clone(), 150, 5));
+        .map
+        .insert(b.clone(), Account::new(b.clone(), b_balance, 5));
     ledger
-        .0
-        .insert(bp2.clone(), Account::new(bp2.clone(), 87, 10));
+        .map
+        .insert(c.clone(), Account::new(c.clone(), c_balance, 10));
+    ledger.total = a_balance + b_balance + c_balance;
 
     println!("=== Initial ===");
     println!("{:?}", ledger);
@@ -213,19 +247,51 @@ pub fn ledger_example() {
     let diff0 = LedgerDiff::from(&[("a", "b", Diff::Transfer(20))]);
     ledger.apply(diff0).expect("diff application is ok");
 
-    println!("=== After transfer: a -20-> b ===");
+    println!("=== After transfer: a -> b (20) ===");
     println!("{:?}", ledger);
 
     let diff1 = LedgerDiff::from(&[("a", "a", Diff::Coinbase(5))]);
-    ledger.apply(diff1).expect("diff application is ok");
+    let old_ledger = ledger.clone();
+    ledger.apply(diff1.clone()).expect("diff application is ok");
+    // TODO total increase
+    match diff1.0.get(&(a.clone(), a.clone())).unwrap() {
+        Diff::Coinbase(n) => {
+            assert_eq!(ledger.total, old_ledger.total + n);
+        }
+        _ => {
+            assert!(false);
+        }
+    }
 
-    println!("=== After coinbase: a -5-> a ===");
+    // TODO balance increase
+
+    println!("=== After coinbase: a (5) ===");
     println!("{:?}", ledger);
 
     let diff2 = LedgerDiff::from(&[("a", "b", Diff::Delegation)]);
+    let old_ledger = ledger.clone();
     ledger.apply(diff2).expect("diff application is ok");
+    for (pk, old_account) in &old_ledger.map {
+        let new_account = ledger.map.get(pk).unwrap();
+        assert_eq!(new_account.balance, old_account.balance);
+        if pk == &a {
+            // delegation
+            assert_eq!(old_account.delegate, None);
+            assert_eq!(new_account.delegate, Some(b.clone()));
+            // other
+            assert_eq!(old_account.balance, old_account.balance);
+            assert_eq!(old_account.delegations, old_account.delegations);
+        } else if pk == &b {
+            let a_balance = ledger.map.get(&a).unwrap().balance;
+            assert_eq!(new_account.delegations, old_account.delegations + a_balance)
+        }
+    }
 
     println!("=== After delegation: a -> b ===");
+    assert_eq!(
+        ledger.map.iter().fold(0, |acc, (_, a)| acc + a.balance),
+        ledger.total
+    );
     println!("{:?}", ledger);
     // assert!(false);
 }
@@ -233,7 +299,7 @@ pub fn ledger_example() {
 impl Debug for Ledger {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let res = writeln!(f, "=== Ledger ===");
-        for (pk, acct) in &self.0 {
+        for (pk, acct) in &self.map {
             writeln!(f, "pk:   {:?},\nacct: {:?}\n", pk, acct).unwrap();
         }
         res
