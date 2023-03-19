@@ -58,20 +58,12 @@ fn forest_example() {
 
     // tree 0
     let id0 = forest.insert(
-        Block::new(
-            a.clone(),
-            10,
-            LedgerDiff::from(&[(a.clone(), a.clone(), Diff::Coinbase(2))]),
-        ),
+        Block::new(&a, 10, LedgerDiff::from(&[(&a, &a, Diff::Coinbase(2))])),
         None,
         0,
     );
     let id1 = forest.insert(
-        Block::new(
-            b.clone(),
-            15,
-            LedgerDiff::from(&[(a.clone(), b.clone(), Diff::Transfer(3))]),
-        ),
+        Block::new(&b, 15, LedgerDiff::from(&[(&a, &b, Diff::Transfer(3))])),
         Some(&id0),
         0,
     );
@@ -79,12 +71,9 @@ fn forest_example() {
     // tree 2
     let id6 = forest.insert(
         Block::new(
-            a.clone(),
+            &a,
             3,
-            LedgerDiff::from(&[
-                (b.clone(), c.clone(), Diff::Transfer(2)),
-                (c.clone(), c.clone(), Diff::Coinbase(3)),
-            ]),
+            LedgerDiff::from(&[(&b, &c, Diff::Transfer(2)), (&c, &c, Diff::Coinbase(3))]),
         ),
         None,
         2,
@@ -92,38 +81,26 @@ fn forest_example() {
 
     // tree 0
     let id2 = forest.insert(
-        Block::new(
-            a.clone(),
-            2,
-            LedgerDiff::from(&[(a.clone(), b.clone(), Diff::Transfer(3))]),
-        ),
+        Block::new(&a, 2, LedgerDiff::from(&[(&a, &b, Diff::Transfer(3))])),
         Some(&id0),
         0,
     );
 
     // tree 1
     let id4 = forest.insert(
-        Block::new(
-            b.clone(),
-            4,
-            LedgerDiff::from(&[(b.clone(), a.clone(), Diff::Transfer(2))]),
-        ),
+        Block::new(&b, 4, LedgerDiff::from(&[(&b, &a, Diff::Transfer(2))])),
         None,
         1,
     );
     let id5 = forest.insert(
-        Block::new(
-            c.clone(),
-            1,
-            LedgerDiff::from(&[(a.clone(), b, Diff::Transfer(2))]),
-        ),
+        Block::new(&c, 1, LedgerDiff::from(&[(&a, &b, Diff::Transfer(2))])),
         None,
         1,
     );
 
     // tree 0
     let id3 = forest.insert(
-        Block::new(c.clone(), 5, LedgerDiff::from(&[(c, a, Diff::Transfer(2))])),
+        Block::new(&c, 5, LedgerDiff::from(&[(&c, &a, Diff::Transfer(2))])),
         None,
         0,
     );

@@ -147,9 +147,11 @@ impl Ledger {
                             && delegate.is_none()
                             && delegation.is_none()
                         {
+                            // insert pk account into ledger
                             self.map.insert(pk.clone(), Account::new(pk, 0, 0));
                         } else {
-                            return Err(Error::TransferAbsentFromLedger(to));
+                            //
+                            return Err(Error::InvalidAbsentFromLedger(to));
                         }
                     }
                     Some(account) => {
@@ -209,10 +211,10 @@ impl LedgerDiff {
         Self(HashMap::new())
     }
 
-    pub fn from(updates: &[(String, String, Diff)]) -> Self {
+    pub fn from(updates: &[(&str, &str, Diff)]) -> Self {
         let mut delta = LedgerDiff::new();
         for (from, to, diff) in updates.iter().cloned() {
-            delta.0.insert((from, to), diff);
+            delta.0.insert((from.to_string(), to.to_string()), diff);
         }
         delta
     }
@@ -273,7 +275,7 @@ pub fn ledger_example() {
     // Transfer
     // A sends 20 to B
     let trans_amt = 20;
-    let diff0 = LedgerDiff::from(&[(a.clone(), b.clone(), Diff::Transfer(trans_amt))]);
+    let diff0 = LedgerDiff::from(&[(&a, &b, Diff::Transfer(trans_amt))]);
     let old_ledger = ledger.clone();
     ledger.apply(diff0).expect("transfer apply is ok");
 
@@ -293,7 +295,7 @@ pub fn ledger_example() {
     // Coinbase
     // A gets a 5 coinbase
     let cb_amt = 5;
-    let diff1 = LedgerDiff::from(&[(a.clone(), a.clone(), Diff::Coinbase(cb_amt))]);
+    let diff1 = LedgerDiff::from(&[(&a, &a, Diff::Coinbase(cb_amt))]);
     let old_ledger = ledger.clone();
     ledger.apply(diff1.clone()).expect("coinbase apply is ok");
 
@@ -318,7 +320,7 @@ pub fn ledger_example() {
 
     // Delegation
     // A delegates to B
-    let diff2 = LedgerDiff::from(&[(a.clone(), b.clone(), Diff::Delegation)]);
+    let diff2 = LedgerDiff::from(&[(&a, &b, Diff::Delegation)]);
     let old_ledger = ledger.clone();
     ledger.apply(diff2).expect("delegation apply is ok");
     for (pk, old_account) in &old_ledger.map {
@@ -348,20 +350,22 @@ pub fn ledger_example() {
     // Creation
     // Create account D
     let d = "D".to_string();
-    let diff3 = LedgerDiff::from(&[(d.clone(), d.clone(), Diff::Creation(d.clone()))]);
+    let diff3 = LedgerDiff::from(&[(&d, &d, Diff::Creation(d.clone()))]);
     let old_ledger = ledger.clone();
-    ledger.apply(diff3).expect("creation apply is ok");
 
-    assert!(ledger.map.contains_key(&d));
+    // D is not in the ledger
     assert!(!old_ledger.map.contains_key(&d));
 
-    // print final ledger
-    println!("{:?}", ledger);
+    // after diff apply, D is in the ledger
+    ledger.apply(diff3).expect("creation apply is ok");
+    assert!(ledger.map.contains_key(&d));
 
     // errors
-    
+    // errors don't change the ledger
+
+    // coinbase error
     let e = "E".to_string();
-    let diff4 = LedgerDiff::from(&[(e.clone(), e.clone(), Diff::Coinbase(10))]);
+    let diff4 = LedgerDiff::from(&[(&e, &e, Diff::Coinbase(10))]);
     let old_ledger = ledger.clone();
     assert_eq!(
         ledger.apply(diff4),
@@ -369,7 +373,8 @@ pub fn ledger_example() {
     );
     assert_eq!(old_ledger, ledger);
 
-    let diff5 = LedgerDiff::from(&[(e.clone(), e.clone(), Diff::Delegation)]);
+    // delegation error
+    let diff5 = LedgerDiff::from(&[(&e, &e, Diff::Delegation)]);
     let old_ledger = ledger.clone();
     assert_eq!(
         ledger.apply(diff5),
@@ -377,7 +382,8 @@ pub fn ledger_example() {
     );
     assert_eq!(old_ledger, ledger);
 
-    let diff6 = LedgerDiff::from(&[(e.clone(), d.clone(), Diff::Transfer(5))]);
+    assert!(!ledger.map.contains_key(&e));
+    let diff6 = LedgerDiff::from(&[(&e, &d, Diff::Transfer(5))]);
     let old_ledger = ledger.clone();
     assert_eq!(
         ledger.apply(diff6),
@@ -385,21 +391,23 @@ pub fn ledger_example() {
     );
     assert_eq!(old_ledger, ledger);
 
-    let diff7 = LedgerDiff::from(&[(d.clone(), e.clone(), Diff::Transfer(5))]);
+    // receiver doesn't exist
+    let diff7 = LedgerDiff::from(&[(&c, &e, Diff::Transfer(5))]);
     let old_ledger = ledger.clone();
-    assert_eq!(
-        ledger.apply(diff7),
-        Err(Error::InsufficientFunds(d.clone(), 0, 5))
-    );
+    assert_eq!(ledger.apply(diff7), Err(Error::TransferAbsentFromLedger(e)));
     assert_eq!(old_ledger, ledger);
 
-    let diff8 = LedgerDiff::from(&[(a.clone(), b, Diff::Transfer(500))]);
+    // insufficient funds error
+    let diff8 = LedgerDiff::from(&[(&a, &b, Diff::Transfer(500))]);
     let old_ledger = ledger.clone();
     assert_eq!(
         ledger.apply(diff8),
         Err(Error::InsufficientFunds(a, 85, 500))
     );
     assert_eq!(old_ledger, ledger);
+
+    // print final ledger
+    println!("{:?}", ledger);
 
     // assert!(false); // uncomment to see stdout
 }
