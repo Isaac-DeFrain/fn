@@ -95,21 +95,43 @@ pub fn insert_weighted_block() {
     // (b, 3) (c, 2)
     //          |
     //        (d, 1)
+
+    let a = "A".to_string();
+    let b = "B".to_string();
+    let c = "C".to_string();
+    let d = "D".to_string();
+
     let tree = &mut WeightedTree::new();
     let root_id = tree.insert(
-        Block::new("a", 1, LedgerDiff::from(&[("b", "a", Diff::Transfer(2))])),
+        Block::new(
+            a.clone(),
+            1,
+            LedgerDiff::from(&[(b.clone(), a.clone(), Diff::Transfer(2))]),
+        ),
         None,
     );
     let node1_id = tree.insert(
-        Block::new("b", 3, LedgerDiff::from(&[("c", "b", Diff::Transfer(1))])),
+        Block::new(
+            b.clone(),
+            3,
+            LedgerDiff::from(&[(c.clone(), b.clone(), Diff::Transfer(1))]),
+        ),
         Some(&root_id),
     );
     let node2_id = tree.insert(
-        Block::new("a", 2, LedgerDiff::from(&[("c", "b", Diff::Transfer(2))])),
+        Block::new(
+            a.clone(),
+            2,
+            LedgerDiff::from(&[(c.clone(), b.clone(), Diff::Transfer(2))]),
+        ),
         Some(&root_id),
     );
     let node3_id = tree.insert(
-        Block::new("c", 1, LedgerDiff::from(&[("a", "c", Diff::Transfer(1))])),
+        Block::new(
+            c.clone(),
+            1,
+            LedgerDiff::from(&[(a.clone(), c.clone(), Diff::Transfer(1))]),
+        ),
         Some(&node1_id),
     );
 
@@ -193,9 +215,9 @@ pub fn insert_weighted_block() {
 
     let node4_id = tree.insert(
         Block::new(
-            "d",
+            d.clone(),
             2,
-            LedgerDiff::from(&[("b", "c", Diff::Transfer(1)), ("a", "d", Diff::Transfer(1))]),
+            LedgerDiff::from(&[(b, c, Diff::Transfer(1)), (a, d, Diff::Transfer(1))]),
         ),
         Some(&node1_id),
     );

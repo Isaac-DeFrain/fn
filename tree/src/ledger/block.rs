@@ -9,11 +9,7 @@ pub struct Block {
 
 #[allow(dead_code)]
 impl Block {
-    pub fn new(pk: &str, weight: u32, diff: LedgerDiff) -> Self {
-        Self {
-            pk: pk.to_string(),
-            diff,
-            weight,
-        }
+    pub fn new(pk: String, weight: u32, diff: LedgerDiff) -> Self {
+        Self { pk, diff, weight }
     }
 }
