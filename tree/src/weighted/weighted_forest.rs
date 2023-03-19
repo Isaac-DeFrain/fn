@@ -41,7 +41,6 @@ impl WeightedForest {
                 Some(tree) => tree.insert(block, parent),
             },
         };
-        // self.trees.sort();
         id
     }
 }
@@ -56,7 +55,7 @@ fn forest_example() {
     let b = "B".to_string();
     let c = "C".to_string();
 
-    // tree 0
+    // add to tree 0
     let id0 = forest.insert(
         Block::new(&a, 10, LedgerDiff::from(&[(&a, &a, Diff::Coinbase(2))])),
         None,
@@ -68,7 +67,7 @@ fn forest_example() {
         0,
     );
 
-    // tree 2
+    // add to tree 2
     let id6 = forest.insert(
         Block::new(
             &a,
@@ -79,14 +78,14 @@ fn forest_example() {
         2,
     );
 
-    // tree 0
+    // add to tree 0
     let id2 = forest.insert(
         Block::new(&a, 2, LedgerDiff::from(&[(&a, &b, Diff::Transfer(3))])),
         Some(&id0),
         0,
     );
 
-    // tree 1
+    // add to tree 1
     let id4 = forest.insert(
         Block::new(&b, 4, LedgerDiff::from(&[(&b, &a, Diff::Transfer(2))])),
         None,
@@ -98,29 +97,31 @@ fn forest_example() {
         1,
     );
 
-    // tree 0
+    // add to tree 0
     let id3 = forest.insert(
         Block::new(&c, 5, LedgerDiff::from(&[(&c, &a, Diff::Transfer(2))])),
         None,
         0,
     );
 
+    // print final forest
     println!("{:?}", forest);
-    // assert!(false);
+
+    // assert!(false); // uncomment to see stdout
 }
 
 impl std::fmt::Debug for WeightedForest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut res = Ok(());
         writeln!(f, "=== Weighted Forest ===\n").unwrap();
-        writeln!(f, "Weight: {}\n", self.weight).unwrap();
+        writeln!(f, "Forest weight: {}\n", self.weight).unwrap();
         let mut trees = self.trees.clone();
         trees.sort();
         for (n, tree) in trees.iter().enumerate() {
-            writeln!(f, "************").unwrap();
-            writeln!(f, "** Tree {} **", n).unwrap();
-            writeln!(f, "************").unwrap();
-            writeln!(f, "* weight: {}", tree.weight).unwrap();
+            writeln!(f, "**********").unwrap();
+            writeln!(f, "* Tree {} *", n).unwrap();
+            writeln!(f, "**********").unwrap();
+            writeln!(f, "* tree weight: {}", tree.weight).unwrap();
             writeln!(f, "* support").unwrap();
             for node_id in tree
                 .tree

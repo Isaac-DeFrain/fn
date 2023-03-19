@@ -109,89 +109,61 @@ pub fn insert_weighted_block() {
         Block::new(&b, 3, LedgerDiff::from(&[(&c, &b, Diff::Transfer(1))])),
         Some(&root_id),
     );
-    let node2_id = tree.insert(
+    let _node2_id = tree.insert(
         Block::new(&a, 2, LedgerDiff::from(&[(&c, &b, Diff::Transfer(2))])),
         Some(&root_id),
     );
-    let node3_id = tree.insert(
+    let _node3_id = tree.insert(
         Block::new(&c, 1, LedgerDiff::from(&[(&a, &c, Diff::Transfer(1))])),
         Some(&node1_id),
     );
 
-    println!("=== Before adding block ===\n");
+    println!("=== Before adding block ===");
+    println!("\n** Weight: {}", tree.weight);
+    println!("\n** Support");
+    for node_id in tree
+        .tree
+        .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
+        .unwrap()
+    {
+        println!(
+            "{:?}: {:?}",
+            tree.tree.get(&node_id).unwrap().data(),
+            tree.support(&node_id)
+        );
+    }
 
-    println!("** Weight: {}\n", tree.weight);
+    println!("\n** Ancestors");
+    for node_id in tree
+        .tree
+        .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
+        .unwrap()
+    {
+        println!(
+            "{:?} => {:?}",
+            tree.tree.get(&node_id).unwrap().data(),
+            tree.tree
+                .ancestors(&node_id)
+                .unwrap()
+                .map(|n| n.data())
+                .cloned()
+                .collect::<Vec<Block>>()
+        );
+    }
 
-    println!("** Ancestors");
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&root_id).unwrap().data(),
-        tree.tree
-            .ancestors(&root_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&node1_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node1_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&node2_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node2_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}\n",
-        tree.tree.get(&node3_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node3_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-
-    println!("** Support");
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&root_id).unwrap().data(),
-        tree.support(&root_id)
-    );
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&node1_id).unwrap().data(),
-        tree.support(&node1_id)
-    );
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&node2_id).unwrap().data(),
-        tree.support(&node2_id)
-    );
-    println!(
-        "{:?} : {:?}\n",
-        tree.tree.get(&node3_id).unwrap().data(),
-        tree.support(&node3_id)
-    );
-
-    println!("** Tree");
+    println!("\n** Tree");
     println!("{:?}", tree);
 
-    println!("=== After adding block ===\n");
+    // add block
 
-    let node4_id = tree.insert(
+    // final tree
+    //    (a, 1)
+    //    /    \
+    // (c, 3) (b, 2)
+    //        /    \
+    //     (f, 2) (d, 1)
+
+    let _node4_id = tree.insert(
         Block::new(
             &d,
             2,
@@ -199,98 +171,44 @@ pub fn insert_weighted_block() {
         ),
         Some(&node1_id),
     );
-    // Final tree
-    //    (a, 1)
-    //    /    \
-    // (c, 3) (b, 2)
-    //        /    \
-    //     (f, 2) (d, 1)
 
-    println!("** Weight: {}\n", tree.weight);
+    println!("=== After adding block ===");
+    println!("\n** Weight: {}", tree.weight);
+    println!("\n** Support");
+    for node_id in tree
+        .tree
+        .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
+        .unwrap()
+    {
+        println!(
+            "{:?}: {:?}",
+            tree.tree.get(&node_id).unwrap().data(),
+            tree.support(&node_id)
+        );
+    }
 
-    println!("** Support");
-    println!(
-        "{:?}: {:?}",
-        tree.tree.get(&root_id).unwrap().data(),
-        tree.support(&root_id)
-    );
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&node1_id).unwrap().data(),
-        tree.support(&node1_id)
-    );
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&node2_id).unwrap().data(),
-        tree.support(&node2_id)
-    );
-    println!(
-        "{:?} : {:?}",
-        tree.tree.get(&node3_id).unwrap().data(),
-        tree.support(&node3_id)
-    );
-    println!(
-        "{:?} : {:?}\n",
-        tree.tree.get(&node4_id).unwrap().data(),
-        tree.support(&node4_id)
-    );
+    println!("\n** Ancestors");
+    for node_id in tree
+        .tree
+        .traverse_level_order_ids(tree.tree.root_node_id().unwrap())
+        .unwrap()
+    {
+        println!(
+            "{:?} => {:?}",
+            tree.tree.get(&node_id).unwrap().data(),
+            tree.tree
+                .ancestors(&node_id)
+                .unwrap()
+                .map(|n| n.data())
+                .cloned()
+                .collect::<Vec<Block>>()
+        );
+    }
 
-    println!("** Ancestors");
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&root_id).unwrap().data(),
-        tree.tree
-            .ancestors(&root_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&node1_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node1_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&node2_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node2_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}",
-        tree.tree.get(&node3_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node3_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-    println!(
-        "{:?} => {:?}\n",
-        tree.tree.get(&node4_id).unwrap().data(),
-        tree.tree
-            .ancestors(&node4_id)
-            .unwrap()
-            .map(|n| n.data())
-            .cloned()
-            .collect::<Vec<Block>>()
-    );
-
-    println!("** Tree");
+    println!("\n** Tree");
     println!("{:?}", tree);
 
-    // assert!(false);
+    // assert!(false); // uncomment to see stdout
 }
 
 impl std::fmt::Debug for Block {

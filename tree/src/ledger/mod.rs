@@ -315,7 +315,7 @@ pub fn ledger_example() {
         old_ledger.map.get(&a).unwrap().balance + cb_amt
     );
 
-    println!("=== After coinbase: A ({}) ===", cb_amt);
+    println!("=== After coinbase: * -> A ({}) ===", cb_amt);
     println!("{:?}", ledger);
 
     // Delegation
@@ -339,7 +339,12 @@ pub fn ledger_example() {
         }
     }
 
-    println!("=== After delegation: A -> B ===");
+    println!(
+        "=== After delegation: A({}), B({}) -> B({}) ===",
+        old_ledger.map.get(&a).unwrap().balance,
+        old_ledger.map.get(&b).unwrap().delegations,
+        ledger.map.get(&b).unwrap().delegations,
+    );
 
     // sum of all account balances = total
     assert_eq!(
@@ -360,7 +365,7 @@ pub fn ledger_example() {
     ledger.apply(diff3).expect("creation apply is ok");
     assert!(ledger.map.contains_key(&d));
 
-    // errors
+    // Errors
     // errors don't change the ledger
 
     // coinbase error
