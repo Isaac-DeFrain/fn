@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
 
-use crate::block::Block;
+use crate::ledger::block::Block;
 
 #[derive(Clone)]
 pub struct WeightedTree {

@@ -1,8 +1,6 @@
-mod block;
-mod ledger;
-mod merge;
-mod weighted_forest;
-mod weighted_tree;
+pub(crate) mod ledger;
+pub(crate) mod merge;
+pub(crate) mod weighted;
 
 fn main() {
     println!("Main");

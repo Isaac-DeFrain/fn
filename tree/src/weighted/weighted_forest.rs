@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use id_tree::NodeId;
 
-use crate::{block::Block, weighted_tree::WeightedTree};
+use crate::{ledger::block::Block, weighted::weighted_tree::WeightedTree};
 
 #[allow(dead_code)]
 struct WeightedForest {

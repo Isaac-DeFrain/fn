@@ -1,29 +1,16 @@
-use std::{collections::HashMap, fmt::Debug};
+pub(crate) mod account;
+pub(crate) mod block;
+
+use std::collections::HashMap;
+use crate::ledger::account::{Account, AccountUpdate};
+
+// types
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq)]
-pub struct Account {
-    pk: String,
-    balance: u64,
-    delegate: Option<String>,
-    delegations: u64,
-}
-
-#[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Ledger {
     total: u64,
     map: HashMap<String, Account>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct AccountUpdate {
-    pk: String,
-    coinbase: bool,
-    amount: Option<i64>,
-    delegate: Option<String>,
-    delegation: Option<u64>,
 }
 
 #[allow(dead_code)]
@@ -35,19 +22,9 @@ pub enum Diff {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct LedgerDiff(HashMap<(String, String), Diff>);
+pub struct LedgerDiff(pub HashMap<(String, String), Diff>);
 
-#[allow(dead_code)]
-impl Account {
-    pub fn new(pk: String, balance: u64, delegations: u64) -> Self {
-        Self {
-            delegate: None,
-            pk,
-            balance,
-            delegations,
-        }
-    }
-}
+// impls
 
 #[allow(dead_code)]
 impl Ledger {
@@ -103,7 +80,7 @@ impl Ledger {
                                 to.clone(),
                                 false,
                                 None,
-                                None,
+                                Some(from.to_string()),
                                 Some(*balance),
                             ))
                         }
@@ -120,7 +97,7 @@ impl Ledger {
                                     ));
                                 }
                                 Some(_) => {
-                                    // from
+                                    // - from
                                     updates.push(AccountUpdate::new(
                                         from.clone(),
                                         false,
@@ -128,7 +105,7 @@ impl Ledger {
                                         None,
                                         None,
                                     ));
-                                    // to
+                                    // + to
                                     updates.push(AccountUpdate::new(
                                         to.clone(),
                                         false,
@@ -218,16 +195,37 @@ impl LedgerDiff {
     }
 }
 
+// debug
+
+impl std::fmt::Debug for Ledger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res = writeln!(f, "=== Ledger ===");
+        for (pk, acct) in &self.map {
+            writeln!(f, "pk:   {:?},\nacct: {:?}\n", pk, acct).unwrap();
+        }
+        res
+    }
+}
+
+impl std::fmt::Debug for LedgerDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[ ").unwrap();
+        for ((from, to), amount) in self.0.clone() {
+            write!(f, "{:?} ", (from, to, amount)).unwrap()
+        }
+        write!(f, "]")
+    }
+}
+
+// unit tests
+
 #[test]
 pub fn ledger_example() {
     let mut ledger = Ledger::new();
 
-    let a = "a".to_string();
-    let b = "b".to_string();
-    let c = "c".to_string();
-    let a_balance = 100;
-    let b_balance = 150;
-    let c_balance = 87;
+    let (a, a_balance) = ("a".to_string(), 100);
+    let (b, b_balance) = ("b".to_string(), 150);
+    let (c, c_balance) = ("c".to_string(), 87);
 
     // insert accounts
     ledger
@@ -244,16 +242,25 @@ pub fn ledger_example() {
     println!("=== Initial ===");
     println!("{:?}", ledger);
 
-    let diff0 = LedgerDiff::from(&[("a", "b", Diff::Transfer(20))]);
-    ledger.apply(diff0).expect("diff application is ok");
+    let trans_amt = 20;
+    let diff0 = LedgerDiff::from(&[("a", "b", Diff::Transfer(trans_amt))]);
+    let old_ledger = ledger.clone();
+    ledger.apply(diff0).expect("transfer diff is ok");
 
-    println!("=== After transfer: a -> b (20) ===");
+    let from_account = old_ledger.map.get(&a).unwrap();
+    if from_account.balance < trans_amt {
+        assert_eq!(ledger, old_ledger);
+    }
+
+    println!("=== After transfer: a -> b ({}) ===", trans_amt);
     println!("{:?}", ledger);
 
-    let diff1 = LedgerDiff::from(&[("a", "a", Diff::Coinbase(5))]);
+    let cb_amt = 5;
+    let diff1 = LedgerDiff::from(&[("a", "a", Diff::Coinbase(cb_amt))]);
     let old_ledger = ledger.clone();
-    ledger.apply(diff1.clone()).expect("diff application is ok");
-    // TODO total increase
+    ledger.apply(diff1.clone()).expect("coinbase diff is ok");
+
+    // total increase
     match diff1.0.get(&(a.clone(), a.clone())).unwrap() {
         Diff::Coinbase(n) => {
             assert_eq!(ledger.total, old_ledger.total + n);
@@ -263,9 +270,10 @@ pub fn ledger_example() {
         }
     }
 
-    // TODO balance increase
+    // balance increase
+    assert_eq!(ledger.map.get(&a).unwrap().balance, old_ledger.map.get(&a).unwrap().balance + cb_amt);
 
-    println!("=== After coinbase: a (5) ===");
+    println!("=== After coinbase: a ({}) ===", cb_amt);
     println!("{:?}", ledger);
 
     let diff2 = LedgerDiff::from(&[("a", "b", Diff::Delegation)]);
@@ -294,24 +302,4 @@ pub fn ledger_example() {
     );
     println!("{:?}", ledger);
     // assert!(false);
-}
-
-impl Debug for Ledger {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let res = writeln!(f, "=== Ledger ===");
-        for (pk, acct) in &self.map {
-            writeln!(f, "pk:   {:?},\nacct: {:?}\n", pk, acct).unwrap();
-        }
-        res
-    }
-}
-
-impl Debug for LedgerDiff {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[ ").unwrap();
-        for ((from, to), amount) in self.0.clone() {
-            write!(f, "{:?} ", (from, to, amount)).unwrap()
-        }
-        write!(f, "]")
-    }
 }
