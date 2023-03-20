@@ -1,3 +1,5 @@
+use crate::ledger::Diff;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Account {
@@ -10,11 +12,7 @@ pub struct Account {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct AccountUpdate {
-    pub pk: String,
-    pub coinbase: bool,
-    pub amount: Option<i64>,
-    pub delegate: Option<String>,
-    pub delegation: Option<u64>,
+    pub diff: Diff,
 }
 
 #[allow(dead_code)]

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use id_tree::{InsertBehavior::*, Node, NodeId, Tree};
+use id_tree::{InsertBehavior::*, Node, NodeId, NodeIdError, Tree};
 
 use crate::ledger::block::Block;
 
@@ -10,6 +10,9 @@ pub struct WeightedTree {
     pub weight: u32,
     pub weights: HashMap<NodeId, u32>,
 }
+
+#[derive(Debug)]
+pub struct TreeError(NodeIdError);
 
 impl WeightedTree {
     pub fn new() -> Self {
@@ -45,13 +48,17 @@ impl WeightedTree {
         id
     }
 
-    pub fn support(&self, node_id: &NodeId) -> u32 {
-        self.tree
-            .traverse_level_order_ids(node_id)
-            .unwrap()
-            .map(|id| self.tree.get(&id).unwrap().data().weight)
-            .reduce(|acc, w| acc + w)
-            .unwrap()
+    pub fn support(&self, node_id: &NodeId) -> Result<u32, TreeError> {
+        match self.tree.get(node_id) {
+            Ok(_) => Ok(self
+                .tree
+                .traverse_level_order_ids(node_id)
+                .unwrap()
+                .map(|id| self.tree.get(&id).unwrap().data().weight)
+                .reduce(|acc, w| acc + w)
+                .unwrap()),
+            Err(err) => Err(TreeError(err)),
+        }
     }
 }
 
@@ -87,7 +94,9 @@ impl std::fmt::Debug for WeightedTree {
 pub fn insert_weighted_block() {
     use crate::ledger::*;
 
+    println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     println!("~~~~~ insert_weighted_block ~~~~~\n");
+    println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     // Base tree
     //    (a, 1)
     //    /    \
@@ -102,19 +111,35 @@ pub fn insert_weighted_block() {
 
     let tree = &mut WeightedTree::new();
     let root_id = tree.insert(
-        Block::new(&a, 1, LedgerDiff::from(&[(&b, &a, Diff::Transfer(2))])),
+        Block::new(
+            &a,
+            1,
+            LedgerDiff::from(&[Diff::Transfer(b.clone(), a.clone(), 2)]),
+        ),
         None,
     );
     let node1_id = tree.insert(
-        Block::new(&b, 3, LedgerDiff::from(&[(&c, &b, Diff::Transfer(1))])),
+        Block::new(
+            &c,
+            2,
+            LedgerDiff::from(&[Diff::Transfer(c.clone(), b.clone(), 1)]),
+        ),
         Some(&root_id),
     );
     let _node2_id = tree.insert(
-        Block::new(&a, 2, LedgerDiff::from(&[(&c, &b, Diff::Transfer(2))])),
+        Block::new(
+            &b,
+            3,
+            LedgerDiff::from(&[Diff::Transfer(c.clone(), b.clone(), 2)]),
+        ),
         Some(&root_id),
     );
     let _node3_id = tree.insert(
-        Block::new(&c, 1, LedgerDiff::from(&[(&a, &c, Diff::Transfer(1))])),
+        Block::new(
+            &d,
+            1,
+            LedgerDiff::from(&[Diff::Transfer(a.clone(), c.clone(), 1)]),
+        ),
         Some(&node1_id),
     );
 
@@ -167,7 +192,7 @@ pub fn insert_weighted_block() {
         Block::new(
             &d,
             2,
-            LedgerDiff::from(&[(&b, &c, Diff::Transfer(1)), (&a, &d, Diff::Transfer(2))]),
+            LedgerDiff::from(&[Diff::Transfer(b, c, 1), Diff::Transfer(a, d.clone(), 2)]),
         ),
         Some(&node1_id),
     );
