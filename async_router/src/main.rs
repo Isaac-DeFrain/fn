@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use anyhow::Result;
 use router::Router;
+use std::sync::Arc;
 
 mod router;
 
@@ -12,7 +12,7 @@ async fn main() -> Result<()> {
         .add_handler("mult", |a, b| async move {
             Ok(format!("{a} * {b} = {}", a * b))
         });
-    
+
     let router_arc = Arc::new(router);
 
     let router = router_arc.clone();
