@@ -1,0 +1,49 @@
+[workspace]
+members = [
+  "async",
+  "async_router",
+  "crypto",
+  "graphviz",
+  "hello_world",
+  "helloworld-tonic",
+  "ipfs",
+  "peano",
+  "petgraph",
+  "practice",
+  "rbe",
+  "tree",
+  "voting-tonic",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+async = { path = "async" }
+async-router = { path = "async_router" }
+crypto-local = { path = "crypto" }
+graphviz = { path = "graphviz" }
+hello-world = { path = "hello_world" }
+helloworld-tonic = { path = "helloworld-tonic" }
+ipfs = { path = "ipfs" }
+peano = { path = "peano" }
+petgraph-local = { path = "petgraph" }
+practice = { path = "practice" }
+rbe = { path = "rbe" }
+tree = { path = "tree" }
+voting-tonic = { path = "voting-tonic" }
+
+rand = "0.8.5"
+hmac = "0.12.1"
+sha2 = "0.10.6"
+hex-literal = "0.3.4"
+graphviz-rust = "0.2.0"
+dot-generator = "0.2.0"
+dot-structures = "0.1.0"
+actix-rt = "2.8.0"
+futures = "0.3.27"
+ipfs-api = "0.17.0"
+ipfs-api-backend-hyper = "0.6.0"
+tokio = { version = "1.26.0", features = ["full"] }
+petgraph = "^0.4.13"
+petgraph-evcxr = "*"
+id_tree = "1.8.0"
