@@ -1,5 +1,6 @@
 pub(crate) mod ledger;
 pub(crate) mod merge;
+pub(crate) mod remove;
 pub(crate) mod weighted;
 
 fn main() {
