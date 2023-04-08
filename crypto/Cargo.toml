@@ -10,5 +10,3 @@ rand = "0.8.5"
 hmac = "0.12.1"
 sha2 = "0.10.6"
 hex-literal = "0.3.4"
-
-[lib]
