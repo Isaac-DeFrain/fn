@@ -15,7 +15,6 @@ pub struct WeightedTree {
     pub pk_weights: HashMap<String, u32>,
     /// each BP's set of blocks
     pub pk_blocks: HashMap<String, HashSet<NodeId>>,
-
 }
 
 #[derive(Debug)]
@@ -35,7 +34,8 @@ impl WeightedTree {
     fn add_bp_block_id(&mut self, pk: &str, node_id: &NodeId) {
         match self.pk_blocks.get_mut(pk) {
             None => {
-                self.pk_blocks.insert(pk.to_string(), HashSet::from([node_id.clone()]));
+                self.pk_blocks
+                    .insert(pk.to_string(), HashSet::from([node_id.clone()]));
             }
             Some(id_set) => {
                 id_set.insert(node_id.clone());
@@ -120,7 +120,7 @@ impl WeightedTree {
         }
     }
 
-    // 
+    //
     pub fn branch_support(&self, leaf_id: &NodeId) -> Result<u32, TreeError> {
         // TODO
         // sum weights of ancestors of a leaf and record the value in the leaf
@@ -216,7 +216,7 @@ pub fn insert_weighted_block() {
     }
 
     println!("\n** Tree");
-    println!("{:?}", tree);
+    println!("{tree:?}");
 
     // add block
 
@@ -229,7 +229,7 @@ pub fn insert_weighted_block() {
 
     let _node4_id = tree.insert(
         Block::new(
-            &a,
+            &a.clone(),
             2,
             LedgerDiff::from(&[Diff::Transfer(b, c, 1), Diff::Transfer(a, d.clone(), 2)]),
         ),
@@ -305,11 +305,6 @@ impl std::fmt::Debug for WeightedTree {
 
 impl std::fmt::Debug for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{{ pk: {:?}, weight: {} }}",
-            &self.pk,
-            self.weight
-        )
+        write!(f, "{{ pk: {:?}, weight: {} }}", &self.pk, self.weight)
     }
 }

@@ -6,17 +6,27 @@ use std::fmt;
 /// here's a doc comment
 pub fn main() {
     println!("{:?}", DebugPrintable(42));
-    println!("{:?}", Person { name: "Rusty", age: 11 });
-    println!("{:#?}", Person { name: "Rusty", age: 11 });
+    println!(
+        "{:?}",
+        Person {
+            name: "Rusty",
+            age: 11
+        }
+    );
+    println!(
+        "{:#?}",
+        Person {
+            name: "Rusty",
+            age: 11
+        }
+    );
     println!("{}", Structure(42));
-    println!("{}", List(vec![0, 1, 2, 3, 4]));
-    println!("");
-    
+    println!("{}\n", List(vec![0, 1, 2, 3, 4]));
+
     let x = 123;
     println!("{}", x);
     println!("0x{:X}", x);
-    println!("0o{:o}", x);
-    println!("");
+    println!("0o{:o}\n", x);
 }
 
 #[derive(Debug)]
@@ -26,7 +36,7 @@ pub struct DebugPrintable(i32);
 #[derive(Debug)]
 pub struct Person<'a> {
     name: &'a str,
-    age: u8
+    age: u8,
 }
 
 struct Structure(i32);
@@ -58,7 +68,9 @@ impl fmt::Display for List {
         for (count, v) in vec.iter().enumerate() {
             // For every element except the first, add a comma.
             // Use the ? operator to return on errors.
-            if count != 0 { write!(f, ", ")?; }
+            if count != 0 {
+                write!(f, ", ")?;
+            }
             write!(f, "{}", v)?;
         }
 

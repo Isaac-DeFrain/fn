@@ -1,6 +1,6 @@
-use ipfs_api::{IpfsApi, IpfsClient};
 use futures::TryStreamExt;
-use std::io::{Cursor, self, Write};
+use ipfs_api::{IpfsApi, IpfsClient};
+use std::io::{self, Cursor, Write};
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,7 @@ async fn main() {
 
     match client.add(data).await {
         Ok(res) => println!("{}", res.hash),
-        Err(e) => eprintln!("error adding file: {}", e)
+        Err(e) => eprintln!("error adding file: {}", e),
     }
 
     // Read file from IPFS
@@ -26,6 +26,6 @@ async fn main() {
 
             out.write_all(&res).unwrap();
         }
-        Err(e) => eprintln!("error getting file: {}", e)
+        Err(e) => eprintln!("error getting file: {}", e),
     }
 }

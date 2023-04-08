@@ -1,8 +1,8 @@
 // Conversion
 
 mod from_into;
-mod tryfrom_tryinto;
 mod to_from_string;
+mod tryfrom_tryinto;
 
 pub fn main() {
     // `From` and `Into`

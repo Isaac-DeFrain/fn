@@ -1,6 +1,6 @@
-mod hello_world;
-mod custom_types;
 mod conversion;
+mod custom_types;
+mod hello_world;
 
 fn main() {
     println!("-----------");
@@ -12,7 +12,7 @@ fn main() {
     println!("custom_types");
     println!("------------");
     custom_types::main();
-    
+
     println!("----------");
     println!("conversion");
     println!("----------");

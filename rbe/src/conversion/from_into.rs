@@ -1,9 +1,9 @@
 // `From` and `Into` are inherently linked
-// 
+//
 // `From`
 // The `From` trait allows for a type to define how to create itself from another type,
 // hence providing a very simple mechanism for converting between several types.
-// 
+//
 // `Into`
 // The `Into` trait is the reciprocal of `From`.
 
@@ -25,18 +25,15 @@ pub fn main() {
     // convert a `str` into a `String`
     let my_str = "hello";
     let my_string = String::from(my_str);
-    println!("Convert str {} to String {}", my_str, my_string);
-    println!("");
+    println!("Convert str {my_str} to String {my_string}\n");
 
     // using `Number::from`
     let num = Number::from(42);
-    println!("My number is {:?}", num);
-    println!("it holds the value {}", num.value);
-    println!("");
+    println!("My number is {num:?}");
+    println!("it holds the value {}\n", num.value);
 
     // using the `Into` trait for free :)
     let int = 5;
     let num: Number = int.into();
-    println!("My number is {:?}", num);
-    println!("");
+    println!("My number is {num:?}\n");
 }

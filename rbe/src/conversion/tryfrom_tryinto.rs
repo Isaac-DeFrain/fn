@@ -28,6 +28,5 @@ pub fn main() {
     let res: Result<EvenNumber, ()> = 5i32.try_into();
     assert_eq!(res, Err(()));
 
-    println!("All asserts passed!");
-    println!("");
+    println!("All asserts passed!\n");
 }

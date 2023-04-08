@@ -53,5 +53,5 @@
 // mac.verify_slice(&code_bytes[..]).unwrap();
 
 pub fn hello() {
-  println!("Hello from hmac!");
+    println!("Hello from hmac!");
 }

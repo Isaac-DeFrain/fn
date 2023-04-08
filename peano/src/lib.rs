@@ -18,11 +18,11 @@ impl Nat for _0 {}
 impl<T: Nat> Nat for Succ<T> {}
 
 #[allow(dead_code)]
-fn test_is_nat<T: Nat>() -> () {}
+fn test_is_nat<T: Nat>() {}
 
 // Less than trait
 trait Lt<A: Nat, B: Nat> {
-    fn check() -> () {}
+    fn check() {}
 }
 
 // NonZero trait
@@ -37,8 +37,8 @@ struct ProofLt<A: Nat, B: Nat>(A, B);
 impl<N: NonZero> Lt<_0, N> for ProofLt<_0, N> {}
 
 // inductive hypothesis
-impl<A: Nat, B: Nat> Lt<Succ<A>, Succ<B>> for ProofLt<Succ<A>, Succ<B>>
-where ProofLt<A, B>: Lt<A, B> {}
+impl<A: Nat, B: Nat> Lt<Succ<A>, Succ<B>> for ProofLt<Succ<A>, Succ<B>> where ProofLt<A, B>: Lt<A, B>
+{}
 
 #[cfg(test)]
 mod tests {

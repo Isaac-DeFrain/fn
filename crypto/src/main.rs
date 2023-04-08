@@ -2,17 +2,20 @@
  * Examples
  */
 
-mod utils;
 mod time;
+mod utils;
 
 fn main() {
     fn take_ownership(s: String) {
         // since the function takes a heap-allocated argument
         // it assumes ownership of the value
         // it is also said that s is moved into take_ownership
-        println!("the ownership of String({}) has been transferred to me :D", s);
+        println!(
+            "the ownership of String({}) has been transferred to me :D",
+            s
+        );
     }
-    
+
     // String => heap-allocated
     let s = String::from("hello");
     take_ownership(s);
@@ -31,7 +34,7 @@ fn main() {
     let r1 = &s;
     let r2 = &s; // we  can create as many immutable references as we like
     println!("{}, {}", r1, r2);
-    
+
     let r3 = &s;
     println!("{}", r3);
 
@@ -50,7 +53,7 @@ fn main() {
     let b = a;
     println!("{}, {}", a, b); // a is still in scope!
 
-    let a : u32 = 42;
+    let a: u32 = 42;
     let b = a;
     println!("{}, {}", a, b); // a is still in scope!
 
@@ -74,7 +77,7 @@ fn main() {
     println!("a : {}, b : {}", a, b); // a is still in scope
 
     // borrowing + mutability
-    fn modify(s : &mut String) {
+    fn modify(s: &mut String) {
         s.push_str(", world");
     }
     // the function requires a mutable borrow
@@ -94,8 +97,8 @@ fn main() {
     // we're fine as long as we don't use m1 again
 
     // clonable function pointer
-    use std::fmt::{Debug, Formatter, Result};
     use rand::prelude::*;
+    use std::fmt::{Debug, Formatter, Result};
     #[derive(Copy, Clone)]
     struct Gen<T>(fn() -> T);
 
@@ -106,7 +109,10 @@ fn main() {
     }
 
     use rand::distributions::Standard;
-    fn gen<T>() -> T where Standard: Distribution<T> {
+    fn gen<T>() -> T
+    where
+        Standard: Distribution<T>,
+    {
         rand::random::<T>()
     }
 
@@ -128,7 +134,8 @@ fn main() {
 
     let mut nums: Vec<i32> = (0..100).collect();
     nums.shuffle(&mut rand::thread_rng());
-    println!("start with {}\npop: {:?}, {:?}, {:?}, {:?}\nremaining: {}",
+    println!(
+        "start with {}\npop: {:?}, {:?}, {:?}, {:?}\nremaining: {}",
         nums.len(),
         nums.pop().unwrap(),
         nums.pop().unwrap(),
@@ -157,14 +164,15 @@ fn main() {
 
     expr_value!({
         let x = 2i32;
-        fn f(z: i32) -> i32 { z + 1 }
+        fn f(z: i32) -> i32 {
+            z + 1
+        }
         f(x) * 7
     });
 
-    // 
+    //
     utils::hmac::hello();
 
-    // 
+    //
     time::examples::main();
-
 }

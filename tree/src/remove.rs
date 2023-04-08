@@ -1,8 +1,8 @@
 #[test]
 fn remove_node() {
-    use id_tree::*;
     use id_tree::InsertBehavior::*;
     use id_tree::RemoveBehavior::*;
+    use id_tree::*;
 
     let mut tree: Tree<i32> = Tree::new();
     let root_id = tree.insert(Node::new(0), AsRoot).unwrap();
@@ -20,6 +20,4 @@ fn remove_node() {
     let mut w = String::new();
     tree.write_formatted(&mut w).unwrap();
     println!("After:\n{}", w);
-
-    panic!();
 }

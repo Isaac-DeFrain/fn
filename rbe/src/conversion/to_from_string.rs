@@ -6,6 +6,5 @@ pub fn main() {
     // As long as `FromStr` is implemented, we can use `parse`
     let parsed: i32 = "5".parse().unwrap();
     let turbo_parsed = "10".parse::<i32>().unwrap();
-    println!("Sum: {:?}", parsed + turbo_parsed);
-    println!("");
+    println!("Sum: {:?}\n", parsed + turbo_parsed);
 }

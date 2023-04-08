@@ -27,13 +27,13 @@ impl List {
         // `self` has type `&List`, and `*self` has type `List`, matching on a
         // concrete type `T` is preferred over a match on a reference `&T`
         // after Rust 2018 you can use self here and tail (with no ref) below as well,
-        // rust will infer &s and ref tail. 
+        // rust will infer &s and ref tail.
         // See https://doc.rust-lang.org/edition-guide/rust-2018/ownership-and-lifetimes/default-match-bindings.html
         match *self {
             // Can't take ownership of the tail, because `self` is borrowed;
             // instead take a reference to the tail
             Cons(_, ref tail) => 1 + tail.len(),
-            Nil => 0
+            Nil => 0,
         }
     }
 
@@ -43,11 +43,9 @@ impl List {
             Cons(head, ref tail) => {
                 // `format!` is similar to `print!`, but returns a heap
                 // allocated string instead of printing to the console
-                format!("{}, {}", head, tail.string_of_t())
-            },
-            Nil => {
-                format!("Nil")
-            },
+                format!("{head}, {}", tail.string_of_t())
+            }
+            Nil => "Nil".to_string(),
         }
     }
 }
@@ -61,10 +59,9 @@ pub fn main() {
     list = list.cons(3);
 
     println!("linked list has length: {}", list.len());
-    println!("{}", list.string_of_t());
-    println!("");
+    println!("{}\n", list.string_of_t());
 
     println!("- constants");
     constants::main();
-    println!("");
+    println!();
 }

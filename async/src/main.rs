@@ -12,7 +12,7 @@ async fn main() {
             fetch(i).await;
         });
         handles.push(handle);
-    };
+    }
 
     for handle in handles {
         handle.await.unwrap();
