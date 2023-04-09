@@ -4,6 +4,7 @@ members = [
   "async_router",
   "crypto",
   "graphviz",
+  "graphql_intro",
   "hello_world",
   "helloworld-tonic",
   "ipfs",
