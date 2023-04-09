@@ -1,5 +1,6 @@
 use juniper::http::{graphiql::graphiql_source, GraphQLRequest};
 use std::{convert::Infallible, sync::Arc};
+use uuid::Uuid;
 use warp::Filter;
 
 use juniper::RootNode;
@@ -13,22 +14,45 @@ struct SubRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
-    fn root() -> Option<&'static str> {
-        None
+    async fn customer(ctx: &Context, id: String) -> juniper::FieldResult<Customer> {
+        let uuid = Uuid::parse_str(&id)?;
+        let row = ctx
+            .0
+            .query_one(
+                "SELECT name, age, email, address FROM customers WHERE id = $1",
+                &[&uuid.to_string()],
+            )
+            .await?;
+        let customer = Customer {
+            id,
+            name: row.try_get(0)?,
+            age: row.try_get(1)?,
+            email: row.try_get(2)?,
+            address: row.try_get(3)?,
+        };
+        Ok(customer)
     }
 }
 
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
     async fn register_customer(
-        _ctx: &Context,
+        ctx: &Context,
         name: String,
         age: i32,
         email: String,
         address: String,
     ) -> juniper::FieldResult<Customer> {
+        let id = uuid::Uuid::new_v4();
+        let email = email.to_lowercase();
+        ctx.0
+            .execute(
+                "INSERT INTO customers (id, name, age, email, address) VALUES ($1, $2, $3, $4, $5)",
+                &[&id, &name, &age, &email, &address],
+            )
+            .await?;
         Ok(Customer {
-            id: "1".to_string(),
+            id: id.to_string(),
             name,
             age,
             email,
