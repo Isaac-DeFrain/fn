@@ -1,0 +1,36 @@
+# Common Rust libraries
+
+- `serde` - generic (de)serialization framework
+- `serde_json` - 
+- `rand` - random number generator
+- `clap`
+  - command line argument parser
+  - [docs](https://docs.rs/tempfile/latest/tempfile/)
+  - [examples]()
+- `log` - lightweight logging
+- `thiserror` - `derive(Error)`
+- `tokio` - event-driven, async platform
+- `sync` - parser for rust source code
+- `regex` - reguar expressions
+- `lazy_static`
+- `once_cell` - single assignment and lazy values
+- dates and times
+  - `chrono`
+  - `time`
+- `bytes`
+- `url`
+- `http`
+- `reqwest`
+- `base64`
+- `cfg-if`
+- [`tempfile`](https://docs.rs/tempfile/latest/tempfile/) - temporary file management
+- `tracing` -
+- `hmac`
+- SHA hash function family
+  - `sha1`
+  - `sha2`
+  - `sha3` (keccak)
+- `futures-channel`
+- `tokio-rustls` - async TLS/SSL streams for tokio
+- `async-std`
+- 
