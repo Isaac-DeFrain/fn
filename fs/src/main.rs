@@ -1,15 +1,40 @@
 use std::{
+    ffi::OsStr,
     fs, io,
     path::{Path, PathBuf},
 };
 
 use glob::{glob, GlobError};
 
-fn main() -> Result<(), GlobError> {
+fn main() {
     let pattern = env!("BLOCK_FILES_PATTERN");
-    glob_rename_dir(pattern)
+    for path in sort_no_rename(pattern) {
+        println!("{:?}", path.file_name().unwrap());
+    }
 }
 
+fn get_blockchain_length(file_name: &OsStr) -> Option<u32> {
+    file_name
+        .to_str()?
+        .split('-')
+        .fold(None, |acc, x| match x.parse::<u32>() {
+            Err(_) => acc,
+            Ok(x) => Some(x),
+        })
+}
+
+fn sort_no_rename<'a>(pattern: &str) -> Vec<PathBuf> {
+    let mut glob_vec: Vec<PathBuf> = glob(pattern)
+        .expect("Failed to read glob pattern")
+        .filter_map(|x| x.ok())
+        .collect();
+    glob_vec.sort_by(|x, y| {
+        get_blockchain_length(x.as_os_str()).cmp(&get_blockchain_length(y.as_os_str()))
+    });
+    glob_vec
+}
+
+#[allow(dead_code)]
 fn glob_rename_dir(pattern: &str) -> Result<(), GlobError> {
     for entry in glob(pattern).expect("Failed to read glob pattern") {
         match entry {
