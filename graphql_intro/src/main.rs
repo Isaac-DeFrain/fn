@@ -48,7 +48,7 @@ impl MutationRoot {
         ctx.0
             .execute(
                 "INSERT INTO customers (id, name, age, email, address) VALUES ($1, $2, $3, $4, $5)",
-                &[&id, &name, &age, &email, &address],
+                &[&id.to_string(), &name, &age, &email, &address],
             )
             .await?;
         Ok(Customer {
