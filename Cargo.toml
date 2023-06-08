@@ -6,6 +6,7 @@ members = [
   "fs",
   "graphviz",
   "graphql_intro",
+  "gsutil",
   "hello_world",
   "helloworld-tonic",
   "ipfs",
