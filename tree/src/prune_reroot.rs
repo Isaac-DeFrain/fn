@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use crate::common::show;
 
 use id_tree::{
     InsertBehavior::{AsRoot, UnderNode},
@@ -8,6 +8,7 @@ use id_tree::{
     Tree,
 };
 
+#[allow(dead_code)]
 pub fn main() {
     let mut tree: Tree<i32> = Tree::new();
     let root_id = tree.insert(Node::new(0), AsRoot).unwrap();
@@ -21,12 +22,21 @@ pub fn main() {
     println!("=== Initial tree ===");
     show(&tree);
 
+    // println!("=== Preorder ===");
+    // for (n, node) in tree.traverse_pre_order(tree.root_node_id().unwrap()).unwrap().enumerate() {
+    //     println!("{n}: {}", node.data())
+    // }
+
+    // println!("=== Postorder ===");
+    // for (n, node) in tree.traverse_post_order(tree.root_node_id().unwrap()).unwrap().enumerate() {
+    //     println!("{n}: {}", node.data())
+    // }
+
     let prune_node_id = node_id2;
     let parent_node_id = node_id1;
 
     // remove all prune node siblings
-    #[allow(clippy::unnecessary_to_owned)]
-    for node_id in tree.get(&parent_node_id).unwrap().children().to_owned() {
+    for node_id in tree.get(&parent_node_id).unwrap().children().clone() {
         if node_id != prune_node_id {
             tree.remove_node(node_id, DropChildren).unwrap();
         }
@@ -45,10 +55,4 @@ pub fn main() {
     show(&tree);
 
     assert_eq!(&prune_node_id, tree.root_node_id().unwrap());
-}
-
-fn show<T: Debug>(tree: &Tree<T>) {
-    let mut w = String::new();
-    tree.write_formatted(&mut w).unwrap();
-    println!("{w}");
 }
