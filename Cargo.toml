@@ -2,6 +2,7 @@
 members = [
   "async",
   "async_router",
+  "blockchain",
   "crypto",
   "fs",
   "graphviz",
