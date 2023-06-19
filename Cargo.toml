@@ -14,6 +14,7 @@ members = [
   "peano",
   "petgraph",
   "practice",
+  "process",
   "rbe",
   "tree",
   "voting-tonic",
