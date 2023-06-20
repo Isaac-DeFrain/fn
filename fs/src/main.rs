@@ -14,16 +14,16 @@ fn main() {
     let time = Instant::now();
     let pattern = env!("BLOCK_FILES_PATTERN");
 
-    let (num_files, size_msg, iterator) = sort_no_rename(pattern);
-    for path in iterator {
-        println!("{:?}", path.file_name().unwrap());
-    }
+    // let (num_files, size_msg, iterator) = sort_no_rename(pattern);
+    // for path in iterator {
+    //     println!("{:?}", path.file_name().unwrap());
+    // }
 
+    let num_files = glob_unpad_dir(pattern).unwrap();
     let total = time.elapsed();
-    // let num_files = glob_unpad_dir(pattern).unwrap();
 
     println!("\n~~~ Stats ~~~");
-    println!("{size_msg}");
+    // println!("{size_msg}");
     println!("Time elapsed: {total:?}");
     println!("Num files:    {num_files:?}\n");
 }
