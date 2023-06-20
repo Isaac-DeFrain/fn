@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 clap = { version = "4.3.4", features = ["derive"] }
+fs = { path = "../fs" }
