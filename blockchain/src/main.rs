@@ -1,5 +1,5 @@
+use canonical_chain_discovery::{backward_discovery, common, forward_discovery};
 use clap::{Parser, Subcommand};
-use canonical_chain_discovery::{backward_discovery, forward_discovery, common};
 
 mod canonical_chain_discovery;
 
@@ -21,12 +21,7 @@ enum CliSubcommand {
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     match Cli::parse().command {
-        CliSubcommand::Backward(args) => {
-            backward_discovery::main(&args)
-        }
-        CliSubcommand::Forward(args) => {
-            forward_discovery::main(&args)
-        }
+        CliSubcommand::Backward(args) => backward_discovery::main(&args),
+        CliSubcommand::Forward(args) => forward_discovery::main(&args),
     }
 }
-

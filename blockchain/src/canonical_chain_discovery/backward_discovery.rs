@@ -1,8 +1,8 @@
 use super::common::*;
-use std::{path::PathBuf, time::Instant, u32::MAX, fs::OpenOptions, io::Write, process};
-use fs::{check_file, check_dir};
+use fs::{check_dir, check_file};
 use glob::glob;
 use log::{error, info};
+use std::{fs::OpenOptions, io::Write, path::PathBuf, process, time::Instant, u32::MAX};
 
 pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
     let blocks_dir = args.blocks_dir.clone();
@@ -39,11 +39,7 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
                     .cmp(&length_from_path(y).unwrap_or(MAX))
             });
 
-            info!(
-                "Sorted {} blocks in {:?}",
-                paths.len(),
-                time.elapsed()
-            );
+            info!("Sorted {} blocks in {:?}", paths.len(), time.elapsed());
             info!("Searching for canonical chain...");
 
             let mut length_start_indices = vec![];
@@ -130,7 +126,7 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
 
             let time = Instant::now();
             while curr_start_idx > 0 {
-                let count  = canonical_paths.len();
+                let count = canonical_paths.len();
                 if count > 0 && count % BLOCK_REPORTING_FREQ as usize == 0 {
                     info!("Found {count} canonical blocks in {:?}", time.elapsed());
                 }
@@ -197,7 +193,8 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
         info!(
             "{} written to {} in {:?}",
             canonical_paths.len() + successive_paths.len(),
-            output_file_path.display(), time.elapsed()
+            output_file_path.display(),
+            time.elapsed()
         );
         info!("Total time: {:?}", total.elapsed());
 

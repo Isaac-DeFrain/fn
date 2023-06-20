@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::{
     ffi::OsStr,
-    fs::File,    
+    fs::File,
     io::{prelude::*, SeekFrom},
     path::{Path, PathBuf},
 };

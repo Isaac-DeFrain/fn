@@ -1,13 +1,11 @@
 use super::common::*;
-use std::{
-    collections::HashSet,
-    io::Write,
-    path::PathBuf,
-    u32::MAX, fs::OpenOptions, process, time::Instant,
-};
 use fs::{check_dir, check_file};
 use glob::glob;
 use log::{error, info};
+use std::{
+    collections::HashSet, fs::OpenOptions, io::Write, path::PathBuf, process, time::Instant,
+    u32::MAX,
+};
 
 pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
     let blocks_dir = args.blocks_dir.clone();
@@ -44,15 +42,11 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
                     .cmp(&length_from_path(y).unwrap_or(MAX))
             });
 
-            info!(
-                "Sorted {} blocks in {:?}",
-                paths.len(),
-                time.elapsed()
-            );
+            info!("Sorted {} blocks in {:?}", paths.len(), time.elapsed());
             info!("Searching for canonical chain...");
 
             let mut length_start_indices = vec![];
-            let mut curr_length = length_from_path(&paths.first().unwrap()).unwrap();
+            let mut curr_length = length_from_path(paths.first().unwrap()).unwrap();
 
             // build the length_start_indices vec corresponding to the
             // longest contiguous chain starting from the lowest block
@@ -71,17 +65,22 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
             let mut length_idx = 0;
             let mut hash_stash = HashSet::with_capacity(10);
 
-            let path = paths.get(*length_start_indices.get(length_idx).unwrap()).unwrap();
+            let path = paths
+                .get(*length_start_indices.get(length_idx).unwrap())
+                .unwrap();
             let mut curr_length = length_from_path(path);
 
             // check that there are sufficiently many blocks ahead
             // if not, we exit the loop
-            while length_start_indices.get(length_idx + MAINNET_CANONICAL_THRESHOLD as usize).is_some() {
-                let count  = canonical_paths.len();
+            while length_start_indices
+                .get(length_idx + MAINNET_CANONICAL_THRESHOLD as usize)
+                .is_some()
+            {
+                let count = canonical_paths.len();
                 if count > 0 && (count * 5) % BLOCK_REPORTING_FREQ as usize == 0 {
                     info!("Found {count} canonical blocks in {:?}", time.elapsed());
                 }
-                
+
                 // collect blocks at curr_length
                 let mut at_same_length = vec![];
                 for path in paths[length_idx..].iter() {
@@ -109,14 +108,13 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
                             .map(|p| length_from_path(p).unwrap_or(MAX))
                             == next_length
                         {
-                            let path =
-                                paths.get(next_length_idx + next_length_idx_offset).unwrap();
+                            let path = paths.get(next_length_idx + next_length_idx_offset).unwrap();
 
                             next_length_idx_offset += 1;
                             let parent_hash = extract_parent_hash_from_path(path).unwrap();
 
                             // if the block is a descendant, add the hash and proceed to the next block
-                            if &parent_hash == &curr_hash {
+                            if parent_hash == curr_hash {
                                 curr_hash = parent_hash.clone();
                                 hash_stash.insert(parent_hash);
 
@@ -124,7 +122,8 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
                                     for path in paths.iter().filter(|p| {
                                         hash_stash.contains(&hash_from_path(p).unwrap())
                                     }) {
-                                        canonical_paths.push(path.file_name().unwrap().to_str().unwrap());
+                                        canonical_paths
+                                            .push(path.file_name().unwrap().to_str().unwrap());
                                     }
                                     continue;
                                 } else {
@@ -140,7 +139,7 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
                 }
                 curr_length = curr_length.map(|h| h + 1);
             }
-            
+
             for path in paths[length_start_indices[length_idx + 1]..].iter() {
                 successive_paths.push(path.file_name().unwrap().to_str().unwrap());
             }
@@ -162,12 +161,16 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
         info!(
             "{} written to {} in {:?}",
             canonical_paths.len() + successive_paths.len(),
-            output_file_path.display(), time.elapsed()
+            output_file_path.display(),
+            time.elapsed()
         );
         info!("Total time: {:?}", total.elapsed());
 
         Ok(())
     } else {
-        Err(anyhow::Error::msg(format!("Blocks dir {} must be a directory", blocks_dir.display())))
+        Err(anyhow::Error::msg(format!(
+            "Blocks dir {} must be a directory",
+            blocks_dir.display()
+        )))
     }
 }
