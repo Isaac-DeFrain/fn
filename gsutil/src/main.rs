@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::{
-    fs::create_dir_all,
+    fs::{create_dir_all, File, OpenOptions},
+    io::prelude::*,
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -32,14 +33,13 @@ fn main() -> anyhow::Result<()> {
     check_dir(&blocks_dir);
 
     // write a file to download the desired Mina blocks
-    let mut contents = String::new();
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(query_file.clone())
+        .unwrap();
     for height in start..(num + start) {
-        contents.push_str(&format!(
-            "gs://mina_network_block_data/mainnet-{height}-*.json\n"
-        ));
+        writeln!(file, "gs://mina_network_block_data/mainnet-{height}-*.json")?;
     }
-
-    std::fs::write(&query_file, contents).expect("File write failed");
 
     // pass the file to gsutil -m cp -I
     let cat_cmd = Command::new("cat")
@@ -68,6 +68,7 @@ fn check_file(file: &PathBuf) {
         assert!(file.is_file(), "{} must be a file!", file.display());
     } else {
         create_dir_all(file.parent().unwrap()).unwrap();
+        File::create(file).unwrap();
     }
 }
 
