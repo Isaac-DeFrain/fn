@@ -1,7 +1,7 @@
 use super::common::*;
 use fs::{check_dir, check_file};
 use glob::glob;
-use log::{error, info};
+use log::{error, info, warn};
 use std::{fs::OpenOptions, io::Write, path::PathBuf, process, time::Instant, u32::MAX};
 
 pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
@@ -21,6 +21,7 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
             .expect("Failed to read glob pattern")
             .filter_map(|x| x.ok())
             .collect();
+
         info!("Collection took {:?}", total.elapsed());
 
         let mut successive_paths = vec![];
@@ -40,6 +41,34 @@ pub fn main(args: &SubcommandArgs) -> anyhow::Result<()> {
             });
 
             info!("Sorted {} blocks in {:?}", paths.len(), time.elapsed());
+            info!("Checking for gaps...");
+
+            let start_length = length_from_path(paths.first().unwrap()).unwrap();
+            let mut next_length = start_length + 1;
+            let mut found_gaps = vec![];
+
+            for path in &paths {
+                if let Some(blockchain_length) = length_from_path(path) {
+                    match blockchain_length.cmp(&next_length) {
+                        std::cmp::Ordering::Equal => next_length += 1,
+                        std::cmp::Ordering::Greater => {
+                            warn!("Skipped: {next_length}");
+                            found_gaps.push(next_length);
+                            next_length += 1;
+                        }
+                        _ => (),
+                    }
+                }
+            }
+
+            if found_gaps.is_empty() {
+                info!(
+                    "No gaps found for blocks between lengths {} and {}",
+                    start_length,
+                    next_length - 1
+                );
+            }
+
             info!("Searching for canonical chain...");
 
             let mut length_start_indices = vec![];
