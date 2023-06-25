@@ -866,8 +866,12 @@ name = "gsutil"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blockchain",
  "clap",
+ "env_logger",
  "fs",
+ "glob",
+ "log",
 ]
 
 [[package]]
