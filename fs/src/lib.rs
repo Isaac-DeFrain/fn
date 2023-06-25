@@ -1,4 +1,7 @@
-use std::{fs::{create_dir_all, File}, path::PathBuf};
+use std::{
+    fs::{create_dir_all, File},
+    path::PathBuf,
+};
 
 pub fn check_file(file: &PathBuf) {
     if file.exists() {

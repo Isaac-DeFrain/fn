@@ -1,9 +1,10 @@
 use std::{
     ffi::OsStr,
     fs, io,
+    mem::size_of_val,
     path::{Path, PathBuf},
     time::Instant,
-    vec::IntoIter, mem::size_of_val,
+    vec::IntoIter,
 };
 
 use bytesize::ByteSize;
@@ -49,7 +50,10 @@ fn sort_no_rename<'a>(pattern: &str) -> (usize, String, IntoIter<PathBuf>) {
         get_blockchain_length(x.as_os_str()).cmp(&get_blockchain_length(y.as_os_str()))
     });
 
-    let size_msg = format!("Size of vec:  {}", ByteSize::b(size_of_val(&*glob_vec) as u64)); 
+    let size_msg = format!(
+        "Size of vec:  {}",
+        ByteSize::b(size_of_val(&*glob_vec) as u64)
+    );
     (glob_vec.len(), size_msg, glob_vec.into_iter())
 }
 
