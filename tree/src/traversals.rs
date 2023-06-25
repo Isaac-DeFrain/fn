@@ -2,8 +2,7 @@ use crate::common::show;
 
 use id_tree::{
     InsertBehavior::{AsRoot, UnderNode},
-    Node,
-    Tree,
+    Node, Tree,
 };
 
 pub fn main() {
@@ -22,19 +21,31 @@ pub fn main() {
 
     println!("=== Level ===");
     println!("(Breadth-first starting from root)");
-    for (n, node) in tree.traverse_level_order(tree.root_node_id().unwrap()).unwrap().enumerate() {
+    for (n, node) in tree
+        .traverse_level_order(tree.root_node_id().unwrap())
+        .unwrap()
+        .enumerate()
+    {
         println!("Node {n}: {}", node.data())
     }
 
     println!("\n=== Preorder ===");
     println!("(Depth-first starting from root)");
-    for (n, node) in tree.traverse_pre_order(tree.root_node_id().unwrap()).unwrap().enumerate() {
+    for (n, node) in tree
+        .traverse_pre_order(tree.root_node_id().unwrap())
+        .unwrap()
+        .enumerate()
+    {
         println!("Node {n}: {}", node.data())
     }
 
     println!("\n=== Postorder ===");
     println!("(Breadth-first starting from highest leaf)");
-    for (n, node) in tree.traverse_post_order(tree.root_node_id().unwrap()).unwrap().enumerate() {
+    for (n, node) in tree
+        .traverse_post_order(tree.root_node_id().unwrap())
+        .unwrap()
+        .enumerate()
+    {
         println!("Node {n}: {}", node.data())
     }
 }

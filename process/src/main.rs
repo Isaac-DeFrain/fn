@@ -1,4 +1,4 @@
-use std::{process::Command, path::PathBuf};
+use std::{path::PathBuf, process::Command};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -9,7 +9,7 @@ async fn main() -> anyhow::Result<()> {
     command.arg("-n");
     command.arg(&format!("gs://mina_network_block_data/mainnet-42-*.json"));
     command.arg(&watch_dir.display().to_string());
-    
+
     let mut cmd = command.spawn()?;
     match cmd.wait() {
         Ok(_) => Ok(()),
