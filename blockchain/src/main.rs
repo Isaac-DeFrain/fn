@@ -1,7 +1,8 @@
-use canonical_chain_discovery::{backward_discovery, common, forward_discovery};
+use canonical_chain_discovery::{backward_discovery, forward_discovery};
 use clap::{Parser, Subcommand};
 
 mod canonical_chain_discovery;
+pub mod common;
 
 #[derive(Parser, Debug)]
 #[command(name = "chain-discovery", author, version, about, long_about = Some("Mina canonical chain discovery"))]

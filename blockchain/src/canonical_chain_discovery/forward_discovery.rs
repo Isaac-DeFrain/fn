@@ -1,3 +1,4 @@
+use blockchain::*;
 use super::common::*;
 use fs::{check_dir, check_file};
 use glob::glob;
