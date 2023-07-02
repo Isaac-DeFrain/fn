@@ -1,5 +1,5 @@
-use blockchain::*;
 use super::common::*;
+use blockchain::*;
 use fs::{check_dir, check_file};
 use glob::glob;
 use log::{error, info, warn};
