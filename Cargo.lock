@@ -862,19 +862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gsutil"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "blockchain",
- "clap",
- "env_logger",
- "fs",
- "glob",
- "log",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1413,6 +1400,19 @@ checksum = "4192263c238a5f0d0c6bfd21f336a313a4ce1c450542449ca191bb657b4642ef"
 dependencies = [
  "mime",
  "unicase",
+]
+
+[[package]]
+name = "mina-indexer-block-util"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blockchain",
+ "clap",
+ "env_logger",
+ "fs",
+ "glob",
+ "log",
 ]
 
 [[package]]
