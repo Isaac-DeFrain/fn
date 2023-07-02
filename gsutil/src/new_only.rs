@@ -7,7 +7,7 @@ use std::{
     fs::{read_to_string, File, OpenOptions},
     io::prelude::*,
     path::PathBuf,
-    process::{Command, Stdio, self},
+    process::{self, Command, Stdio},
     str::FromStr,
 };
 
@@ -31,6 +31,43 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
 
     assert!(blocks_dir.exists(), "Must supply a blocks dir!");
 
+    info!("Reading block directory {}", blocks_dir.display());
+
+    // get max length from blocks in blocks_dir
+    let mut our_block_paths: Vec<PathBuf> =
+        glob(&format!("{}/mainnet-*-*.json", blocks_dir.display()))
+            .unwrap()
+            .filter_map(|p| p.ok())
+            .collect();
+
+    our_block_paths.sort_by(|x, y| {
+        length_from_path(x)
+            .unwrap()
+            .cmp(&length_from_path(y).unwrap())
+    });
+    let our_max_length = MinaMainnetBlock::from_str(
+        our_block_paths
+            .last()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap(),
+    )?
+    .length;
+
+    info!("Our max block length: {our_max_length}");
+    info!(
+        "Max block retrieved at: {:?}",
+        our_block_paths
+            .last()
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .created()
+            .unwrap()
+    );
+
     if query_file.exists() {
         assert!(query_file.is_file(), "Query file must be a file!");
         info!("Query file found. Checking max length...");
@@ -44,12 +81,6 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .as_secs() as u32
             / 60;
-        let our_max_length = read_to_string(query_file.clone())
-            .unwrap()
-            .lines()
-            .filter_map(|q| MinaMainnetBlockQuery::from_str(q).ok().map(|q| q.length))
-            .max()
-            .unwrap();
 
         info!("Max known mainnet length: {our_max_length}");
         info!("{min_since_modified} min since last modification");
@@ -87,33 +118,6 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             Err(e) => return Err(anyhow::Error::from(e)),
         }
     }
-
-    info!("Reading block directory {}", blocks_dir.display());
-
-    // get max length from blocks in blocks_dir
-    let mut our_block_paths: Vec<PathBuf> =
-        glob(&format!("{}/mainnet-*-*.json", blocks_dir.display()))
-            .unwrap()
-            .filter_map(|p| p.ok())
-            .collect();
-
-    our_block_paths.sort_by(|x, y| {
-        length_from_path(x)
-            .unwrap()
-            .cmp(&length_from_path(y).unwrap())
-    });
-    let our_max_length = MinaMainnetBlock::from_str(
-        our_block_paths
-            .last()
-            .unwrap()
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap(),
-    )?
-    .length;
-
-    info!("Our max block length: {our_max_length}");
 
     let mut all_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(ls_file_path)?
         .lines()
