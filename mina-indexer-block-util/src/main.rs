@@ -5,7 +5,7 @@ mod new_only;
 
 #[derive(Parser, Debug)]
 #[command(name = "mina-indexer-block-util", author, about, long_about = Some("
-Download blocks from the mina_network_block_data bucket with ease!"))]
+Download Mina blocks from GCP buckets with ease!"))]
 struct Entrypoint {
     /// Only download the new blocks absent from your block dir
     #[command(subcommand)]
