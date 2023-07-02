@@ -1,3 +1,6 @@
+use bytesize::ByteSize;
+use clap::Parser;
+use glob::{glob, GlobError};
 use std::{
     ffi::OsStr,
     fs, io,
@@ -7,13 +10,18 @@ use std::{
     vec::IntoIter,
 };
 
-use bytesize::ByteSize;
-
-use glob::{glob, GlobError};
+#[derive(Parser, Debug)]
+#[command(name = "mina-block-patterns", author, about, long_about = Some("Iterate over Mina blocks!"))]
+struct CliArgs {
+    /// Block file glob pattern
+    #[arg(short, long)]
+    block_files_pattern: String,
+}
 
 fn main() {
+    let args = CliArgs::parse();
+    let pattern = &args.block_files_pattern;
     let time = Instant::now();
-    let pattern = env!("BLOCK_FILES_PATTERN");
 
     // let (num_files, size_msg, iterator) = sort_no_rename(pattern);
     // for path in iterator {
@@ -41,7 +49,7 @@ fn get_blockchain_length(file_name: &OsStr) -> Option<u32> {
 }
 
 #[allow(dead_code)]
-fn sort_no_rename<'a>(pattern: &str) -> (usize, String, IntoIter<PathBuf>) {
+fn sort_no_rename(pattern: &str) -> (usize, String, IntoIter<PathBuf>) {
     let mut glob_vec: Vec<PathBuf> = glob(pattern)
         .expect("Failed to read glob pattern")
         .filter_map(|x| x.ok())
