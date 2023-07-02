@@ -22,13 +22,29 @@ pub struct NewArgs {
     /// File to write gsutil ls to
     #[arg(short, long, default_value = concat!(env!("HOME"), "/.mina-indexer-ls"))]
     ls_file: PathBuf,
+    /// Skip the ls file creation if you already have most blocks
+    #[arg(short, long, default_value_t = false)]
+    skip_ls_file: bool,
 }
 
 pub fn main(args: NewArgs) -> anyhow::Result<()> {
-    let query_file = args.query_file;
+    let query_file_path = args.query_file;
     let blocks_dir = args.blocks_dir;
     let ls_file_path = args.ls_file;
+    let skip_ls_file = args.skip_ls_file;
 
+    // check gsutil is installed
+    match Command::new("gsutil").arg("version").spawn() {
+        Ok(_) => (),
+        Err(_) => {
+            println!(
+                "Please install gsutil! see https://cloud.google.com/storage/docs/gsutil_install"
+            );
+            process::exit(2);
+        }
+    }
+
+    check_file(&query_file_path);
     assert!(blocks_dir.exists(), "Must supply a blocks dir!");
 
     info!("Reading block directory {}", blocks_dir.display());
@@ -72,11 +88,16 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             / 60_f32
     );
 
-    if query_file.exists() {
-        assert!(query_file.is_file(), "Query file must be a file!");
-        info!("Query file found");
+    let ls_file;
+    if skip_ls_file || ls_file_path.exists() {
+        if skip_ls_file {
+            info!("ls file creation skipped");
+        } else {
+            info!("ls file found - searching for blocks since last modification");
+        }
 
-        let min_since_modified = query_file
+        ls_file = File::open(ls_file_path.clone())?;
+        let min_since_modified = ls_file
             .metadata()
             .unwrap()
             .modified()
@@ -86,41 +107,35 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .as_secs() as f32
             / 60_f32;
 
-        if min_since_modified > 3_f32 {
+        if !skip_ls_file {
             info!("{min_since_modified} min since last modification");
             info!(
                 "Potentially {} new block lengths",
                 min_since_modified as u32 / 3
             );
-
-            let mut file = File::create(query_file.clone()).unwrap();
-            let max_mainnet_length = our_max_length + (min_since_modified as u32 / 3) + 1;
-
-            for n in our_max_length..=max_mainnet_length {
-                writeln!(file, "gs://mina_network_block_data/mainnet-{n}-*.json")?;
-            }
-
-            // write file with appropriate URIs
-            let mut file = OpenOptions::new()
-                .append(true)
-                .open(query_file.clone())
-                .unwrap();
-
-            // query previous block lengths because we might have missed some
-            debug!("Writing query file: {}", query_file.display());
-            for length in 2.max(our_max_length - 10)..=max_mainnet_length {
-                writeln!(file, "gs://mina_network_block_data/mainnet-{length}-*.json")?;
-            }
-        } else {
-            info!("Only {min_since_modified} min since last modification");
-            process::exit(0);
         }
-    } else {
-        check_file(&query_file);
-        info!("Querying mina_network_block_data bucket...");
 
-        // ls all mainnet blocks with length from mina_network_block_data gcloud, collect in vec
-        let ls_file = File::create(ls_file_path.clone())?;
+        let mut query_file = File::create(query_file_path.clone()).unwrap();
+        let max_mainnet_length = our_max_length + (min_since_modified as u32 / 3) + 1;
+
+        // write query file with appropriate URIs
+        // query previous block lengths because we may have missed them in previous queries
+        debug!("Writing query file {}", query_file_path.display());
+        for length in 2.max(our_max_length - 10)..=max_mainnet_length {
+            writeln!(
+                query_file,
+                "gs://mina_network_block_data/mainnet-{length}-*.json"
+            )?;
+        }
+        info!(
+            "Querying for block lengths: {}..{max_mainnet_length}",
+            2.max(our_max_length - 10)
+        );
+    } else {
+        info!("Querying all mina_network_block_data. This takes a while...");
+
+        // ls all mainnet blocks with length from mina_network_block_data bucket, collect in vec
+        ls_file = File::create(ls_file_path.clone())?;
         let mut gsutil_ls_cmd = Command::new("gsutil")
             .arg("-m")
             .arg("ls")
@@ -134,27 +149,34 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             Err(e) => return Err(anyhow::Error::from(e)),
         }
 
-        let mut new_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(&ls_file_path)?
+        let mut all_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(&ls_file_path)?
             .lines()
             .filter_map(|q| MinaMainnetBlockQuery::from_str(q).ok())
             .collect();
 
         info!(
             "{} mainnet blocks found in bucket",
-            new_mainnet_blocks.len()
+            all_mainnet_blocks.len()
         );
-        new_mainnet_blocks.sort_by(|x, y| x.length.cmp(&y.length));
+        all_mainnet_blocks.sort_by(|x, y| x.length.cmp(&y.length));
 
-        let max_mainnet_length = new_mainnet_blocks.last().map_or(0, |q| q.length);
+        let max_mainnet_length = all_mainnet_blocks.last().map_or(0, |q| q.length);
         info!("Mainnet max block length: {max_mainnet_length}");
 
-        std::fs::copy(&ls_file_path, &query_file)?;
-        std::fs::remove_file(ls_file_path)?;
+        // start at our current max length - 10
+        let mut query_file = File::create(query_file_path.clone())?;
+        for query in all_mainnet_blocks
+            .iter()
+            .skip_while(|q| q.length < our_max_length - 10)
+        {
+            writeln!(query_file, "{}", query.to_string())?;
+        }
     }
 
     // download the blocks
+    // `cat query_file | gsutil -m cp -I blocks_dir`
     let cat_cmd = Command::new("cat")
-        .arg(query_file.clone())
+        .arg(query_file_path.clone())
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
@@ -173,8 +195,10 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         Err(e) => return Err(anyhow::Error::from(e)),
     }
 
-    // clear query file
-    OpenOptions::new().write(true).open(query_file).unwrap();
+    // clear & keep ls file, remove query file
+    let mut ls_file = OpenOptions::new().write(true).open(ls_file_path).unwrap();
+    write!(ls_file, "")?;
+    std::fs::remove_file(query_file_path)?;
 
     Ok(())
 }
