@@ -14,13 +14,13 @@ use std::{
 #[derive(Parser, Debug, Clone)]
 pub struct NewArgs {
     /// File to write queries to
-    #[arg(short, long, default_value = concat!(env!("HOME"), "/.gsutil-mina-new-block-queries"))]
+    #[arg(short, long, default_value = concat!(env!("HOME"), "/.mina-indexer-new-block-queries"))]
     query_file: PathBuf,
     /// Directory to dump blocks into
-    #[arg(short, long, default_value = concat!(env!("HOME"), "/.gsutil-mina-new-blocks"))]
+    #[arg(short, long, default_value = concat!(env!("HOME"), "/.mina-indexer-new-blocks"))]
     blocks_dir: PathBuf,
     /// File to write gsutil ls to
-    #[arg(short, long, default_value = concat!(env!("HOME"), "/.gsutil-mina-ls"))]
+    #[arg(short, long, default_value = concat!(env!("HOME"), "/.mina-indexer-ls"))]
     ls_file: PathBuf,
 }
 
@@ -58,7 +58,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
 
     info!("Our max block length: {our_max_length}");
     info!(
-        "Max block retrieved at: {:?}",
+        "Max length block retrieved {:?}m ago",
         our_block_paths
             .last()
             .unwrap()
@@ -66,11 +66,15 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .created()
             .unwrap()
+            .elapsed()
+            .unwrap()
+            .as_secs_f32()
+            / 60_f32
     );
 
     if query_file.exists() {
         assert!(query_file.is_file(), "Query file must be a file!");
-        info!("Query file found. Checking max length...");
+        info!("Query file found");
 
         let min_since_modified = query_file
             .metadata()
@@ -79,29 +83,41 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .elapsed()
             .unwrap()
-            .as_secs() as u32
-            / 60;
+            .as_secs() as f32
+            / 60_f32;
 
-        info!("Max known mainnet length: {our_max_length}");
-        info!("{min_since_modified} min since last modification");
-
-        if min_since_modified > 3 {
-            info!("Potentially {} new block lengths", min_since_modified / 3);
+        if min_since_modified > 3_f32 {
+            info!("{min_since_modified} min since last modification");
+            info!(
+                "Potentially {} new block lengths",
+                min_since_modified as u32 / 3
+            );
 
             let mut file = File::create(query_file.clone()).unwrap();
-            for n in 0..=(min_since_modified / 3) {
-                writeln!(
-                    file,
-                    "gs://mina_network_block_data/mainnet-{}-*.json",
-                    our_max_length + n
-                )?;
+            let max_mainnet_length = our_max_length + (min_since_modified as u32 / 3) + 1;
+
+            for n in our_max_length..=max_mainnet_length {
+                writeln!(file, "gs://mina_network_block_data/mainnet-{n}-*.json")?;
+            }
+
+            // write file with appropriate URIs
+            let mut file = OpenOptions::new()
+                .append(true)
+                .open(query_file.clone())
+                .unwrap();
+
+            // query previous block lengths because we might have missed some
+            debug!("Writing query file: {}", query_file.display());
+            for length in 2.max(our_max_length - 10)..=max_mainnet_length {
+                writeln!(file, "gs://mina_network_block_data/mainnet-{length}-*.json")?;
             }
         } else {
-            process::exit(1);
+            info!("Only {min_since_modified} min since last modification");
+            process::exit(0);
         }
     } else {
         check_file(&query_file);
-        info!("Querying the mina_network_block_data bucket...");
+        info!("Querying mina_network_block_data bucket...");
 
         // ls all mainnet blocks with length from mina_network_block_data gcloud, collect in vec
         let ls_file = File::create(ls_file_path.clone())?;
@@ -117,33 +133,28 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             Ok(_) => (),
             Err(e) => return Err(anyhow::Error::from(e)),
         }
-    }
 
-    let mut all_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(ls_file_path)?
-        .lines()
-        .filter_map(|q| MinaMainnetBlockQuery::from_str(q).ok())
-        .collect();
+        let mut new_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(&ls_file_path)?
+            .lines()
+            .filter_map(|q| MinaMainnetBlockQuery::from_str(q).ok())
+            .collect();
 
-    info!("{} mainnet blocks found", all_mainnet_blocks.len());
-    all_mainnet_blocks.sort_by(|x, y| x.length.cmp(&y.length));
+        info!(
+            "{} mainnet blocks found in bucket",
+            new_mainnet_blocks.len()
+        );
+        new_mainnet_blocks.sort_by(|x, y| x.length.cmp(&y.length));
 
-    let max_mainnet_length = all_mainnet_blocks.last().map_or(0, |q| q.length);
-    info!("Mainnet max block length: {max_mainnet_length}");
+        let max_mainnet_length = new_mainnet_blocks.last().map_or(0, |q| q.length);
+        info!("Mainnet max block length: {max_mainnet_length}");
 
-    // write file with appropriate URIs
-    let mut file = OpenOptions::new()
-        .append(true)
-        .open(query_file.clone())
-        .unwrap();
-
-    debug!("Writing query file: {}", query_file.display());
-    for length in (our_max_length + 1)..=max_mainnet_length {
-        writeln!(file, "gs://mina_network_block_data/mainnet-{length}-*.json")?;
+        std::fs::copy(&ls_file_path, &query_file)?;
+        std::fs::remove_file(ls_file_path)?;
     }
 
     // download the blocks
     let cat_cmd = Command::new("cat")
-        .arg(query_file)
+        .arg(query_file.clone())
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
@@ -158,12 +169,14 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         .unwrap();
 
     match gsutil_cp_cmd.wait() {
-        Ok(exit_status) => {
-            println!("{exit_status}");
-            Ok(())
-        }
-        Err(e) => Err(anyhow::Error::from(e)),
+        Ok(exit_status) => println!("{exit_status}"),
+        Err(e) => return Err(anyhow::Error::from(e)),
     }
+
+    // clear query file
+    OpenOptions::new().write(true).open(query_file).unwrap();
+
+    Ok(())
 }
 
 struct MinaMainnetBlockQuery {
