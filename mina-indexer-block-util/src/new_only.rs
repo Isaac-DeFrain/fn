@@ -22,14 +22,27 @@ pub struct NewArgs {
     /// File to write gsutil ls to
     #[arg(short, long, default_value = concat!(env!("HOME"), "/.mina-indexer-ls"))]
     ls_file: PathBuf,
+    /// The number of block lengths below the current max to query
+    #[arg(long, default_value_t = 10)]
+    buffer: u32,
+    /// Start downloading all blocks at or above this length
+    #[arg(short, long, default_value = None)]
+    start: Option<u32>,
+    /// Download strictly blocks strictly above the current max height
+    #[arg(long, default_value_t = false)]
+    strict: bool,
 }
 
 pub fn main(args: NewArgs) -> anyhow::Result<()> {
     let query_file = args.query_file;
     let blocks_dir = args.blocks_dir;
     let ls_file_path = args.ls_file;
+    let buffer = args.buffer;
+    let start = args.start;
+    let strict = args.strict;
 
     assert!(blocks_dir.exists(), "Must supply a blocks dir!");
+    assert!(!strict || start.is_none(), "Can't use `--start` and `--strict` together");
 
     info!("Reading block directory {}", blocks_dir.display());
 
@@ -108,7 +121,17 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
 
             // query previous block lengths because we might have missed some
             debug!("Writing query file: {}", query_file.display());
-            for length in 2.max(our_max_length - 10)..=max_mainnet_length {
+            let start = match (strict, start) {
+                (true, None) => 2.max(our_max_length + 1),
+                (false, None) => if buffer < our_max_length {
+                    2.max(our_max_length - buffer)
+                } else {
+                    2
+                },
+                (false, Some(start_length)) => start_length,
+                _ => unreachable!(),
+            };
+            for length in start..=max_mainnet_length {
                 writeln!(file, "gs://mina_network_block_data/mainnet-{length}-*.json")?;
             }
         } else {
