@@ -31,16 +31,40 @@ pub struct NewArgs {
     /// Download strictly blocks strictly above the current max height
     #[arg(long, default_value_t = false)]
     strict: bool,
+    /// Name of GCP bucket
+    #[arg(long, default_value = "mina_network_block_data")]
+    bucket: String,
+    /// Name of Mina network
+    #[arg(long, default_value = "mainnet")]
+    network: String,
+    /// Skip the ls file creation if you already have a substantial amount of blocks
+    #[arg(short, long, default_value_t = false)]
+    skip_ls_file: bool,
 }
 
 pub fn main(args: NewArgs) -> anyhow::Result<()> {
-    let query_file = args.query_file;
+    let query_file_path = args.query_file;
     let blocks_dir = args.blocks_dir;
     let ls_file_path = args.ls_file;
     let buffer = args.buffer;
     let start = args.start;
     let strict = args.strict;
+    let bucket = args.bucket;
+    let network = args.network;
+    let skip_ls_file = args.skip_ls_file;
 
+    // check gsutil is installed
+    match Command::new("gsutil").arg("version").spawn() {
+        Ok(_) => (),
+        Err(_) => {
+            println!(
+                "Please install gsutil! see https://cloud.google.com/storage/docs/gsutil_install"
+            );
+            process::exit(2);
+        }
+    }
+
+    check_file(&query_file_path);
     assert!(blocks_dir.exists(), "Must supply a blocks dir!");
     assert!(!strict || start.is_none(), "Can't use `--start` and `--strict` together");
 
@@ -48,7 +72,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
 
     // get max length from blocks in blocks_dir
     let mut our_block_paths: Vec<PathBuf> =
-        glob(&format!("{}/mainnet-*-*.json", blocks_dir.display()))
+        glob(&format!("{}/{network}-*-*.json", blocks_dir.display()))
             .unwrap()
             .filter_map(|p| p.ok())
             .collect();
@@ -69,9 +93,9 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     )?
     .length;
 
-    info!("Our max block length: {our_max_length}");
+    info!("Our max {network} block length: {our_max_length}");
     info!(
-        "Max length block retrieved {:?}m ago",
+        "Max length {network} block retrieved {:?}m ago",
         our_block_paths
             .last()
             .unwrap()
@@ -85,11 +109,16 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             / 60_f32
     );
 
-    if query_file.exists() {
-        assert!(query_file.is_file(), "Query file must be a file!");
-        info!("Query file found");
+    let ls_file;
+    if skip_ls_file || query_file_path.exists() {
+        if skip_ls_file {
+            info!("ls file creation skipped");
+        } else {
+            info!("ls file found - searching for blocks since last modification");
+        }
 
-        let min_since_modified = query_file
+        ls_file = File::open(ls_file_path.clone())?;
+        let min_since_modified = ls_file
             .metadata()
             .unwrap()
             .modified()
@@ -99,28 +128,19 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .as_secs() as f32
             / 60_f32;
 
-        if min_since_modified > 3_f32 {
+        if !skip_ls_file {
             info!("{min_since_modified} min since last modification");
             info!(
-                "Potentially {} new block lengths",
+                "Potentially {} new {network} block lengths",
                 min_since_modified as u32 / 3
             );
+        }
 
-            let mut file = File::create(query_file.clone()).unwrap();
-            let max_mainnet_length = our_max_length + (min_since_modified as u32 / 3) + 1;
+        let mut query_file = File::create(query_file_path.clone()).unwrap();
+        let max_network_length = our_max_length + (min_since_modified as u32 / 3) + 1;
 
-            for n in our_max_length..=max_mainnet_length {
-                writeln!(file, "gs://mina_network_block_data/mainnet-{n}-*.json")?;
-            }
-
-            // write file with appropriate URIs
-            let mut file = OpenOptions::new()
-                .append(true)
-                .open(query_file.clone())
-                .unwrap();
-
-            // query previous block lengths because we might have missed some
-            debug!("Writing query file: {}", query_file.display());
+            // write query file with appropriate URIs
+            debug!("Writing query file: {}", query_file_path.display());
             let start = match (strict, start) {
                 (true, None) => 2.max(our_max_length + 1),
                 (false, None) => if buffer < our_max_length {
@@ -131,23 +151,22 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
                 (false, Some(start_length)) => start_length,
                 _ => unreachable!(),
             };
-            for length in start..=max_mainnet_length {
-                writeln!(file, "gs://mina_network_block_data/mainnet-{length}-*.json")?;
+            for length in start..=max_network_length {
+                writeln!(query_file, "gs://{bucket}/{network}-{length}-*.json")?;
             }
-        } else {
-            info!("Only {min_since_modified} min since last modification");
-            process::exit(0);
-        }
+        info!(
+            "Querying {network} block lengths: {}..{max_network_length}",
+            2.max(our_max_length - 10)
+        );
     } else {
-        check_file(&query_file);
-        info!("Querying mina_network_block_data bucket...");
+        info!("Querying all {network} blocks from {bucket}. This may take a while...");
 
-        // ls all mainnet blocks with length from mina_network_block_data gcloud, collect in vec
-        let ls_file = File::create(ls_file_path.clone())?;
+        // ls all mainnet blocks with length from mina_network_block_data bucket, collect in vec
+        ls_file = File::create(ls_file_path.clone())?;
         let mut gsutil_ls_cmd = Command::new("gsutil")
             .arg("-m")
             .arg("ls")
-            .arg("gs://mina_network_block_data/mainnet-*-*.json")
+            .arg(&format!("gs://{bucket}/{network}-*-*.json"))
             .stdout(Stdio::from(ls_file))
             .spawn()
             .unwrap();
@@ -157,27 +176,34 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             Err(e) => return Err(anyhow::Error::from(e)),
         }
 
-        let mut new_mainnet_blocks: Vec<MinaMainnetBlockQuery> = read_to_string(&ls_file_path)?
+        let mut all_network_blocks: Vec<MinaBlockQuery> = read_to_string(&ls_file_path)?
             .lines()
-            .filter_map(|q| MinaMainnetBlockQuery::from_str(q).ok())
+            .filter_map(|q| MinaBlockQuery::from_str(q).ok())
             .collect();
 
         info!(
-            "{} mainnet blocks found in bucket",
-            new_mainnet_blocks.len()
+            "{} {network} blocks found in bucket",
+            all_network_blocks.len()
         );
-        new_mainnet_blocks.sort_by(|x, y| x.length.cmp(&y.length));
+        all_network_blocks.sort_by(|x, y| x.length.cmp(&y.length));
 
-        let max_mainnet_length = new_mainnet_blocks.last().map_or(0, |q| q.length);
-        info!("Mainnet max block length: {max_mainnet_length}");
+        let max_network_length = all_network_blocks.last().map_or(0, |q| q.length);
+        info!("{network} max block length: {max_network_length}");
 
-        std::fs::copy(&ls_file_path, &query_file)?;
-        std::fs::remove_file(ls_file_path)?;
+        // start at our current max length - 10
+        let mut query_file = File::create(query_file_path.clone())?;
+        for query in all_network_blocks
+            .iter()
+            .skip_while(|q| q.length < our_max_length - 10)
+        {
+            writeln!(query_file, "{}", query.to_string())?;
+        }
     }
 
     // download the blocks
+    // `cat query_file | gsutil -m cp -I blocks_dir`
     let cat_cmd = Command::new("cat")
-        .arg(query_file.clone())
+        .arg(query_file_path.clone())
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
@@ -196,37 +222,51 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         Err(e) => return Err(anyhow::Error::from(e)),
     }
 
-    // clear query file
-    OpenOptions::new().write(true).open(query_file).unwrap();
+    // clear & keep ls file, remove query file
+    let mut ls_file = OpenOptions::new().write(true).open(ls_file_path).unwrap();
+    write!(ls_file, "")?;
+    std::fs::remove_file(query_file_path)?;
 
     Ok(())
 }
 
-struct MinaMainnetBlockQuery {
+struct MinaBlockQuery {
     length: u32,
     state_hash: String,
+    bucket: String,
+    network: String,
 }
 
-impl FromStr for MinaMainnetBlockQuery {
+impl FromStr for MinaBlockQuery {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(length_and_hash) = s.strip_prefix("gs://mina_network_block_data/mainnet-") {
-            let mut parts = length_and_hash.split('-');
+        // shape = gs://bucket/network-length-state_hash.json
+        if let Some(all_fields) = s.strip_prefix("gs://") {
+            let mut all_fields = all_fields.split('/');
+            let bucket = all_fields.next().unwrap().to_string();
+            let network_length_hash = all_fields.next().unwrap();
+            let mut parts = network_length_hash.split('-');
+            let network = parts.next().unwrap().to_string();
             let length: u32 = parts.next().unwrap().parse()?;
             let state_hash = parts.next().unwrap().split('.').next().unwrap().to_string();
 
-            return Ok(MinaMainnetBlockQuery { length, state_hash });
+            return Ok(MinaBlockQuery {
+                length,
+                state_hash,
+                bucket,
+                network,
+            });
         }
         Err(anyhow::Error::msg(format!("{s} parsed incorrectly!")))
     }
 }
 
-impl ToString for MinaMainnetBlockQuery {
+impl ToString for MinaBlockQuery {
     fn to_string(&self) -> String {
         format!(
-            "gs://mina_network_block_data/mainnet-{}-{}.json",
-            self.length, self.state_hash
+            "gs://{}/{}-{}-{}.json",
+            self.bucket, self.network, self.length, self.state_hash
         )
     }
 }
@@ -239,7 +279,7 @@ impl FromStr for MinaMainnetBlock {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(length_and_hash) = s.strip_prefix("mainnet-") {
+        if let Some(length_and_hash) = s.strip_prefix("*-") {
             let length: u32 = length_and_hash.split('-').next().unwrap().parse()?;
 
             return Ok(MinaMainnetBlock { length });
