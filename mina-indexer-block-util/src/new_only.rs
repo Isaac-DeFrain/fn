@@ -110,7 +110,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     );
 
     let ls_file;
-    if skip_ls_file || query_file_path.exists() {
+    if skip_ls_file || ls_file_path.exists() && query_file_path.exists() {
         if skip_ls_file {
             info!("ls file creation skipped");
         } else {

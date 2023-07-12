@@ -7,7 +7,7 @@ async fn main() -> anyhow::Result<()> {
     command.arg("-m");
     command.arg("cp");
     command.arg("-n");
-    command.arg(&format!("gs://mina_network_block_data/mainnet-42-*.json"));
+    command.arg("gs://mina_network_block_data/mainnet-42-*.json");
     command.arg(&watch_dir.display().to_string());
 
     let mut cmd = command.spawn()?;
