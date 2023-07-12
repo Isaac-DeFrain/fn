@@ -38,7 +38,7 @@ pub struct NewArgs {
     #[arg(long, default_value = "mainnet")]
     network: String,
     /// Skip the ls file creation if you already have a substantial amount of blocks
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     skip_ls_file: bool,
 }
 
@@ -142,13 +142,9 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             // write query file with appropriate URIs
             debug!("Writing query file: {}", query_file_path.display());
             let start = match (strict, start) {
-                (true, None) => 2.max(our_max_length + 1),
-                (false, None) => if buffer < our_max_length {
-                    2.max(our_max_length - buffer)
-                } else {
-                    2
-                },
+                (false, None) => 2.max(our_max_length.max(buffer) - buffer),
                 (false, Some(start_length)) => start_length,
+                (true, None) => 2.max(our_max_length + 1),
                 _ => unreachable!(),
             };
             for length in start..=max_network_length {
@@ -279,7 +275,9 @@ impl FromStr for MinaMainnetBlock {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(length_and_hash) = s.strip_prefix("*-") {
+        let mut chars = s.char_indices().skip_while(|(_, c)| *c != '-');
+        if chars.next().is_some() {
+            let length_and_hash: String = chars.map(|(_, c)| c).collect();
             let length: u32 = length_and_hash.split('-').next().unwrap().parse()?;
 
             return Ok(MinaMainnetBlock { length });
