@@ -53,20 +53,23 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     let network = args.network;
     let skip_ls_file = args.skip_ls_file;
 
+    check_file(&query_file_path);
+    assert!(blocks_dir.exists(), "Must supply a blocks dir!");
+    assert!(
+        !strict || start.is_none(),
+        "Can't use `--start` and `--strict` together"
+    );
+
     // check gsutil is installed
-    match Command::new("gsutil").arg("version").spawn() {
+    match Command::new("gsutil").arg("version").output() {
         Ok(_) => (),
         Err(_) => {
             println!(
-                "Please install gsutil! see https://cloud.google.com/storage/docs/gsutil_install"
+                "Please install gsutil! See https://cloud.google.com/storage/docs/gsutil_install"
             );
             process::exit(2);
         }
     }
-
-    check_file(&query_file_path);
-    assert!(blocks_dir.exists(), "Must supply a blocks dir!");
-    assert!(!strict || start.is_none(), "Can't use `--start` and `--strict` together");
 
     info!("Reading block directory {}", blocks_dir.display());
 
@@ -82,6 +85,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .cmp(&length_from_path(y).unwrap())
     });
+
     let our_max_length = MinaMainnetBlock::from_str(
         our_block_paths
             .last()
@@ -90,16 +94,12 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .to_str()
             .unwrap(),
-    )?
+    )
+    .unwrap_or(MinaMainnetBlock { length: 0 })
     .length;
 
-    info!("Our max {network} block length: {our_max_length}");
-    info!(
-        "Max length {network} block retrieved {:?}m ago",
-        our_block_paths
-            .last()
-            .unwrap()
-            .metadata()
+    let last_block_modified = our_block_paths.last().map(|path| {
+        path.metadata()
             .unwrap()
             .created()
             .unwrap()
@@ -107,7 +107,12 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .unwrap()
             .as_secs_f32()
             / 60_f32
-    );
+    });
+
+    if last_block_modified.is_some() {
+        info!("Our max {network} block length: {our_max_length}");
+        info!("Max length {network} block retrieved {last_block_modified:?}m ago");
+    }
 
     let ls_file;
     if skip_ls_file || ls_file_path.exists() && query_file_path.exists() {
@@ -118,15 +123,17 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         }
 
         ls_file = File::open(ls_file_path.clone())?;
-        let min_since_modified = ls_file
-            .metadata()
-            .unwrap()
-            .modified()
-            .unwrap()
-            .elapsed()
-            .unwrap()
-            .as_secs() as f32
-            / 60_f32;
+        let min_since_modified = last_block_modified.unwrap_or(
+            ls_file
+                .metadata()
+                .unwrap()
+                .modified()
+                .unwrap()
+                .elapsed()
+                .unwrap()
+                .as_secs() as f32
+                / 60_f32,
+        );
 
         if !skip_ls_file {
             info!("{min_since_modified} min since last modification");
@@ -139,23 +146,24 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         let mut query_file = File::create(query_file_path.clone()).unwrap();
         let max_network_length = our_max_length + (min_since_modified as u32 / 3) + 1;
 
-            // write query file with appropriate URIs
-            debug!("Writing query file: {}", query_file_path.display());
-            let start = match (strict, start) {
-                (false, None) => 2.max(our_max_length.max(buffer) - buffer),
-                (false, Some(start_length)) => start_length,
-                (true, None) => 2.max(our_max_length + 1),
-                _ => unreachable!(),
-            };
-            for length in start..=max_network_length {
-                writeln!(query_file, "gs://{bucket}/{network}-{length}-*.json")?;
-            }
+        // write query file with appropriate URIs
+        debug!("Writing query file: {}", query_file_path.display());
+        let start = match (strict, start) {
+            (false, None) => 2.max(our_max_length.max(buffer) - buffer),
+            (false, Some(start_length)) => start_length,
+            (true, None) => 2.max(our_max_length + 1),
+            _ => unreachable!(),
+        };
+        for length in start..=max_network_length {
+            writeln!(query_file, "gs://{bucket}/{network}-{length}-*.json")?;
+        }
         info!(
             "Querying {network} block lengths: {}..{max_network_length}",
             2.max(our_max_length - 10)
         );
     } else {
         info!("Querying all {network} blocks from {bucket}. This may take a while...");
+        info!("If you don't want to check all blocks, this process can be skipped --skip-ls-file");
 
         // ls all mainnet blocks with length from mina_network_block_data bucket, collect in vec
         ls_file = File::create(ls_file_path.clone())?;
@@ -164,8 +172,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             .arg("ls")
             .arg(&format!("gs://{bucket}/{network}-*-*.json"))
             .stdout(Stdio::from(ls_file))
-            .spawn()
-            .unwrap();
+            .spawn()?;
 
         match gsutil_ls_cmd.wait() {
             Ok(_) => (),
@@ -197,21 +204,20 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     }
 
     // download the blocks
-    // `cat query_file | gsutil -m cp -I blocks_dir`
+    // `cat query_file | gsutil -m cp -n -I blocks_dir`
     let cat_cmd = Command::new("cat")
         .arg(query_file_path.clone())
         .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+        .spawn()?;
 
     let mut gsutil_cp_cmd = Command::new("gsutil")
         .arg("-m")
         .arg("cp")
+        .arg("-n")
         .arg("-I")
         .arg(blocks_dir)
         .stdin(Stdio::from(cat_cmd.stdout.unwrap()))
-        .spawn()
-        .unwrap();
+        .spawn()?;
 
     match gsutil_cp_cmd.wait() {
         Ok(exit_status) => println!("{exit_status}"),
@@ -219,8 +225,10 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     }
 
     // clear & keep ls file, remove query file
-    let mut ls_file = OpenOptions::new().write(true).open(ls_file_path).unwrap();
-    write!(ls_file, "")?;
+    OpenOptions::new()
+        .write(true)
+        .open(ls_file_path)?
+        .set_len(0)?;
     std::fs::remove_file(query_file_path)?;
 
     Ok(())

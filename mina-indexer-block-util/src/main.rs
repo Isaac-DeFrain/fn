@@ -23,6 +23,7 @@ enum Command {
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
+    // dispatch appropriate handler
     match Entrypoint::parse().command {
         Command::Contiguous(args) => contiguous::main(args),
         Command::NewOnly(args) => new_only::main(args),
