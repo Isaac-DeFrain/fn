@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod contiguous;
+mod continuous_loop;
 mod new_only;
 
 #[derive(Parser, Debug)]
@@ -18,6 +19,8 @@ enum Command {
     NewOnly(new_only::NewArgs),
     /// Download a contiguous collection blocks
     Contiguous(contiguous::ContiguousArgs),
+    /// Run the block fetcher in a continuous loop
+    Loop(continuous_loop::LoopArgs),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -27,5 +30,6 @@ fn main() -> anyhow::Result<()> {
     match Entrypoint::parse().command {
         Command::Contiguous(args) => contiguous::main(args),
         Command::NewOnly(args) => new_only::main(args),
+        Command::Loop(args) => continuous_loop::main(args),
     }
 }
