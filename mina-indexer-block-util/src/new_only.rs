@@ -1,13 +1,14 @@
+use crate::common::check_gsutil;
 use blockchain::*;
 use clap::Parser;
-use fs::check_file;
+use fs::{check_dir, check_file};
 use glob::glob;
 use log::{debug, info};
 use std::{
     fs::{read_to_string, File, OpenOptions},
     io::prelude::*,
     path::PathBuf,
-    process::{self, Command, Stdio},
+    process::{Command, Stdio},
     str::FromStr,
 };
 
@@ -54,22 +55,12 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     let skip_ls_file = args.skip_ls_file;
 
     check_file(&query_file_path);
-    assert!(blocks_dir.exists(), "Must supply a blocks dir!");
+    check_dir(&blocks_dir);
     assert!(
         !strict || start.is_none(),
         "Can't use `--start` and `--strict` together"
     );
-
-    // check gsutil is installed
-    match Command::new("gsutil").arg("version").output() {
-        Ok(_) => (),
-        Err(_) => {
-            println!(
-                "Please install gsutil! See https://cloud.google.com/storage/docs/gsutil_install"
-            );
-            process::exit(2);
-        }
-    }
+    check_gsutil();
 
     info!("Reading block directory {}", blocks_dir.display());
 
@@ -165,7 +156,7 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
         info!("Querying all {network} blocks from {bucket}. This may take a while...");
         info!("If you don't want to check all blocks, this process can be skipped --skip-ls-file");
 
-        // ls all mainnet blocks with length from mina_network_block_data bucket, collect in vec
+        // ls all network blocks with length from the bucket, collect in vec
         ls_file = File::create(ls_file_path.clone())?;
         let mut gsutil_ls_cmd = Command::new("gsutil")
             .arg("-m")
@@ -204,24 +195,25 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
     }
 
     // download the blocks
-    // `cat query_file | gsutil -m cp -n -I blocks_dir`
+    // cat query_file | gsutil -m cp -n -I blocks_dir
     let cat_cmd = Command::new("cat")
         .arg(query_file_path.clone())
         .stdout(Stdio::piped())
         .spawn()?;
 
-    let mut gsutil_cp_cmd = Command::new("gsutil")
+    let gsutil_output = Command::new("gsutil")
         .arg("-m")
         .arg("cp")
         .arg("-n")
         .arg("-I")
         .arg(blocks_dir)
         .stdin(Stdio::from(cat_cmd.stdout.unwrap()))
-        .spawn()?;
+        .output()?;
 
-    match gsutil_cp_cmd.wait() {
-        Ok(exit_status) => println!("{exit_status}"),
-        Err(e) => return Err(anyhow::Error::from(e)),
+    // only output successfully copied blocks
+    let output = String::from_utf8(gsutil_output.stderr);
+    for line in output?.split('\n').filter(|s| s.starts_with("Copying")) {
+        println!("{line}");
     }
 
     // clear & keep ls file, remove query file
