@@ -1,3 +1,4 @@
+use crate::common::check_gsutil;
 use clap::Parser;
 use fs::{check_dir, check_file};
 use log::info;
@@ -5,7 +6,7 @@ use std::{
     fs::OpenOptions,
     io::prelude::*,
     path::PathBuf,
-    process::{self, Command, Stdio},
+    process::{Command, Stdio},
 };
 
 #[derive(Parser, Debug, Clone)]
@@ -22,6 +23,12 @@ pub struct ContiguousArgs {
     /// Number of block lengths to download
     #[arg(short, long, default_value_t = 1000)]
     num: usize,
+    /// Name of Mina network
+    #[arg(short, long, default_value = "mainnet")]
+    network: String,
+    /// Name of GCP bucket
+    #[arg(long, default_value = "mina_network_block_data")]
+    bucket: String,
 }
 
 pub fn main(args: ContiguousArgs) -> anyhow::Result<()> {
@@ -29,20 +36,12 @@ pub fn main(args: ContiguousArgs) -> anyhow::Result<()> {
     let blocks_dir = args.blocks_dir;
     let start = args.start;
     let num = args.num;
+    let network = args.network;
+    let bucket = args.bucket;
 
     check_file(&query_file);
     check_dir(&blocks_dir);
-
-    // check gsutil is installed
-    match Command::new("gsutil").arg("version").output() {
-        Ok(_) => (),
-        Err(_) => {
-            println!(
-                "Please install gsutil! See https://cloud.google.com/storage/docs/gsutil_install"
-            );
-            process::exit(2);
-        }
-    }
+    check_gsutil();
 
     // write query file to download the desired Mina blocks
     let mut file = OpenOptions::new().append(true).open(query_file.clone())?;
@@ -50,28 +49,29 @@ pub fn main(args: ContiguousArgs) -> anyhow::Result<()> {
 
     info!("Writing query file...");
     for height in start..(num + start) {
-        writeln!(file, "gs://mina_network_block_data/mainnet-{height}-*.json")?;
+        writeln!(file, "gs://{bucket}/{network}-{height}-*.json")?;
     }
 
-    // pass the file to gsutil -m cp -I
+    // cat query_file | gsutil -m cp -n -I
     let cat_cmd = Command::new("cat")
         .arg(query_file)
         .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+        .spawn()?;
 
-    let mut gsutil_cmd = Command::new("gsutil")
+    let gsutil_output = Command::new("gsutil")
         .arg("-m")
         .arg("cp")
         .arg("-n")
         .arg("-I")
         .arg(blocks_dir)
         .stdin(Stdio::from(cat_cmd.stdout.unwrap()))
-        .spawn()
-        .unwrap();
+        .output()?;
 
-    match gsutil_cmd.wait() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(anyhow::Error::from(e)),
+    // only output successfully copied blocks
+    let output = String::from_utf8(gsutil_output.stderr);
+    for line in output?.split('\n').filter(|s| s.starts_with("Copying")) {
+        println!("{line}");
     }
+
+    Ok(())
 }

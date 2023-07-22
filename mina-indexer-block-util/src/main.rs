@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod common;
 mod contiguous;
 mod continuous_loop;
 mod new_only;

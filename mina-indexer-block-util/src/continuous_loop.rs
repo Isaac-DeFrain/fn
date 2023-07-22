@@ -1,12 +1,14 @@
+use crate::common::check_gsutil;
 use blockchain::length_from_path;
 use clap::Parser;
+use fs::{check_dir, check_file};
 use glob::glob;
 use log::{debug, info};
 use std::{
     fs::File,
     io::prelude::*,
     path::{Path, PathBuf},
-    process::{self, Command, Stdio},
+    process::{Command, Stdio},
     time::Duration,
 };
 
@@ -44,24 +46,15 @@ pub fn main(args: LoopArgs) -> anyhow::Result<()> {
     let query_file_path = args.query_file;
     let additional = args.additional;
 
-    assert!(blocks_dir.exists(), "Must supply a blocks dir!");
-
-    debug!("Checking gsutil is installed...");
-    match Command::new("gsutil").arg("version").output() {
-        Ok(_) => (),
-        Err(_) => {
-            println!(
-                "Please install gsutil! See https://cloud.google.com/storage/docs/gsutil_install"
-            );
-            process::exit(2);
-        }
-    }
+    check_file(&query_file_path);
+    check_dir(&blocks_dir);
+    check_gsutil();
 
     info!("Doing the initial catchup...");
     let sleep_duration = Duration::new(frequency, 0);
 
     // before entering the maintenance loop, we grab blocks until we find a length that doesn't exist
-    let mut output = read_current_blocks_and_write_query(
+    let mut output = read_current_blocks_and_query(
         &blocks_dir,
         &query_file_path,
         &network,
@@ -74,7 +67,7 @@ pub fn main(args: LoopArgs) -> anyhow::Result<()> {
         .split('\n')
         .any(|s| s.starts_with("CommandException"))
     {
-        output = read_current_blocks_and_write_query(
+        output = read_current_blocks_and_query(
             &blocks_dir,
             &query_file_path,
             &network,
@@ -89,7 +82,7 @@ pub fn main(args: LoopArgs) -> anyhow::Result<()> {
 
     // maintenance loop
     loop {
-        read_current_blocks_and_write_query(
+        read_current_blocks_and_query(
             &blocks_dir,
             &query_file_path,
             &network,
@@ -102,7 +95,7 @@ pub fn main(args: LoopArgs) -> anyhow::Result<()> {
     }
 }
 
-fn read_current_blocks_and_write_query(
+fn read_current_blocks_and_query(
     blocks_dir: &Path,
     query_file_path: &Path,
     network: &str,
