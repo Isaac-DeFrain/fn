@@ -15,6 +15,7 @@ members = [
   "petgraph",
   "practice",
   "process",
+  "program-output-normalizer",
   "rbe",
   "tree",
   "voting-tonic",

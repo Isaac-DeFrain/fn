@@ -2,7 +2,7 @@ use crate::version::Version;
 use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct Error {
+pub struct Error {
     version: Version,
     error: String,
 }

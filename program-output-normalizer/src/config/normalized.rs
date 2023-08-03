@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 
-pub(crate) trait Output {
+pub trait Output {
     fn network_create() -> NetworkCreate;
     fn network_deploy() -> NetworkDeploy;
     fn network_destroy() -> NetworkDestroy;
@@ -15,21 +15,21 @@ pub(crate) trait Output {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NetworkCreate {
+pub struct NetworkCreate {
     network_id: NetworkId,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NetworkDeploy {
+pub struct NetworkDeploy {
     network_id: NetworkId,
     nodes: HashMap<NodeId, NodeInfo>,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NetworkDestroy {}
+pub struct NetworkDestroy {}
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NodeInfo {
+pub struct NodeInfo {
     node_id: NodeId,
     node_type: NodeType,
     network_id: NetworkId,
@@ -38,47 +38,47 @@ pub(crate) struct NodeInfo {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NetworkStatus {}
+pub struct NetworkStatus {}
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NodeStarted {
+pub struct NodeStarted {
     node_id: NodeId,
     fresh_state: bool,
     git_commit: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct NodeStopped {
+pub struct NodeStopped {
     node_id: NodeId,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct ArchiveDataDump {
+pub struct ArchiveDataDump {
     node_id: NodeId,
     data: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct MinaLogsDump {
+pub struct MinaLogsDump {
     node_id: NodeId,
     logs: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct PrecomputedBlockDump {
+pub struct PrecomputedBlockDump {
     node_id: NodeId,
     blocks: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct ReplayerRun {
+pub struct ReplayerRun {
     node_id: NodeId,
     logs: String,
 }
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Serialize)]
-pub(crate) enum NodeType {
+pub enum NodeType {
     ArchiveNode,
     BlockProducer,
     SeedNode,
@@ -89,7 +89,7 @@ pub(crate) enum NodeType {
 macro_rules! impl_struct {
     ($name:ident, $type:ident) => {
         #[derive(Clone, Debug, Serialize)]
-        pub(crate) struct $name($type);
+        pub struct $name($type);
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
