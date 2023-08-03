@@ -1,5 +1,5 @@
-mod normalized;
+pub mod normalized;
 
 // config types
-mod aws;
-mod minimina;
+pub mod aws;
+pub mod minimina;

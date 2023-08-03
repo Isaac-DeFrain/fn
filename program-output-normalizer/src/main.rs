@@ -1,22 +1,6 @@
 use clap::Parser;
+use program_output_normalizer::*;
 use std::process::Command;
-
-mod config;
-mod error;
-mod version;
-
-#[derive(Parser, Debug)]
-struct Program {
-    /// Version of the config file
-    #[arg(short, long)]
-    version: version::Version,
-    /// Config type
-    #[arg(long)]
-    config: String,
-    /// Command to interpret the output of
-    #[arg(short, long)]
-    command: String,
-}
 
 fn main() -> anyhow::Result<()> {
     let args = Program::parse();
