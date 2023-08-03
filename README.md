@@ -1,3 +1,3 @@
-# rust practice
+# fn
 
-An assortment of various concepts from rust
+An exploration of rust and various Mina-related projects
