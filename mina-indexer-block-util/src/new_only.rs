@@ -100,7 +100,8 @@ pub fn main(args: NewArgs) -> anyhow::Result<()> {
             / 60_f32
     });
 
-    if last_block_modified.is_some() {
+    // TODO: get `scheduled_time` from highest block and estimate number of block heights from that
+    if let Some(last_block_modified) = last_block_modified {
         info!("Our max {network} block length: {our_max_length}");
         info!("Max length {network} block retrieved {last_block_modified:?}m ago");
     }

@@ -15,7 +15,27 @@ git clone git@github.com:Isaac-DeFrain/fn.git
 cd fn
 ```
 
+To make your life simpler, you may want to create an alias
+
+```txt
+alias iggy="RUST_LOG=info /path/to/target/release/mina-indexer-block-util"
+```
+
 ## Use cases
+
+### I want all the blocks
+
+Simple
+
+```sh
+RUST_LOG=info cargo run --release --bin mina-indexer-block-util -- all -b /path/to/blocks/dir
+```
+
+For more options, see
+
+```sh
+cargo run --bin mina-indexer-block-util -- all --help
+```
 
 ### I just need a contiguous collection of blocks
 
